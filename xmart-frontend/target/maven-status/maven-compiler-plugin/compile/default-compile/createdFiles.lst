@@ -1,0 +1,4 @@
+edu/ezip/ing1/pds/MainFrontEnd.class
+edu/ezip/ing1/pds/services/StudentService.class
+edu/ezip/ing1/pds/requests/InsertStudentsClientRequest.class
+edu/ezip/ing1/pds/requests/SelectAllStudentsClientRequest.class

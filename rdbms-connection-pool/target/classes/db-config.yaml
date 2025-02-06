@@ -1,6 +1,6 @@
-databaseName: "pds"
+databaseName: "medicalhub"
 host: "127.0.0.1"
-port: 3306
-username : "root"
-password: "root"
+port: 3307
+username: "root"
+password: "omar"
 poolSize: 1

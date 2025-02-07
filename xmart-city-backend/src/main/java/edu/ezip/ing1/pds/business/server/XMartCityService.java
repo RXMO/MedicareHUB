@@ -1,6 +1,7 @@
 package edu.ezip.ing1.pds.business.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.ezip.ing1.pds.business.dto.Student;
 import edu.ezip.ing1.pds.business.dto.Students;
@@ -24,6 +25,7 @@ public class XMartCityService {
     private enum Queries {
         SELECT_ALL_STUDENTS("SELECT t.name, t.firstname, t.groupname FROM students t"),
         INSERT_STUDENT("INSERT into students (name, firstname, groupname) values (?, ?, ?)");
+
         private final String query;
 
         private Queries(final String query) {
@@ -32,8 +34,9 @@ public class XMartCityService {
     }
 
     public static XMartCityService inst = null;
-    public static final XMartCityService getInstance()  {
-        if(inst == null) {
+
+    public static final XMartCityService getInstance() {
+        if (inst == null) {
             inst = new XMartCityService();
         }
         return inst;
@@ -48,7 +51,7 @@ public class XMartCityService {
         Response response = null;
 
         final Queries queryEnum = Enum.valueOf(Queries.class, request.getRequestOrder());
-        switch(queryEnum) {
+        switch (queryEnum) {
             case SELECT_ALL_STUDENTS:
                 response = SelectAllStudents(request, connection);
                 break;
@@ -62,25 +65,47 @@ public class XMartCityService {
         return response;
     }
 
-    private Response InsertStudent(final Request request, final Connection connection) throws SQLException, IOException {
-        return null;
+    private Response InsertStudent(final Request request, final Connection connection)
+            throws SQLException, IOException {
+
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Student requestData = objectMapper.readValue(request.getRequestBody(), Student.class);
+
+        // Gestion des erreurs lors de la désérialisation
+
+        String name = requestData.getName();
+        String firstname = requestData.getFirstname();
+        String groupname = requestData.getGroup();
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_STUDENT.query)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, firstname);
+            pstmt.setString(3, groupname);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                return new Response(request.getRequestId(), "Étudiant ajouté avec succès");
+            } else {
+                return new Response(request.getRequestId(), "Échec de l'ajout de l'étudiant");
+            }
+        }
     }
 
-
-    private Response SelectAllStudents(final Request request, final Connection connection) throws SQLException, JsonProcessingException {
-//        final ObjectMapper objectMapper = new ObjectMapper();
-//        final Statement stmt = connection.createStatement();
-//        final ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_STUDENTS.query);
-//        Students students = new Students();
-//        while (res.next()) {
-//            Student student = new Student();
-//            student.setName(res.getString(1));
-//            student.setFirstname(res.getString(2));
-//            student.setGroup(res.getString(3));
-//            students.add(student);
-//        }
-//        return new Response(request.getRequestId(), objectMapper.writeValueAsString(students));
-        return null;
+    private Response SelectAllStudents(final Request request, final Connection connection)
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final Statement stmt = connection.createStatement();
+        final ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_STUDENTS.query);
+        Students students = new Students();
+        while (res.next()) {
+            Student student = new Student();
+            student.setName(res.getString(1));
+            student.setFirstname(res.getString(2));
+            student.setGroup(res.getString(3));
+            students.add(student);
+        }
+        return new Response(request.getRequestId(), objectMapper.writeValueAsString(students));
     }
 
 }

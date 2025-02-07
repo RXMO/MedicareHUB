@@ -26,7 +26,7 @@ public class StudentService {
     private final static String studentsToBeInserted = "students-to-be-inserted.yaml";
 
     final String insertRequestOrder = "INSERT_STUDENT";
-    final String selectRequestOrder = "SELECT_STUDENTS";
+    final String selectRequestOrder = "SELECT_ALL_STUDENTS";
 
     private final NetworkConfig networkConfig;
 
@@ -39,7 +39,7 @@ public class StudentService {
         final Students guys = ConfigLoader.loadConfig(Students.class, studentsToBeInserted);
 
         int birthdate = 0;
-        for(final Student guy : guys.getStudents()) {
+        for (final Student guy : guys.getStudents()) {
             final ObjectMapper objectMapper = new ObjectMapper();
             final String jsonifiedGuy = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(guy);
             logger.trace("Student with its JSON face : {}", jsonifiedGuy);
@@ -49,7 +49,7 @@ public class StudentService {
             request.setRequestOrder(insertRequestOrder);
             request.setRequestContent(jsonifiedGuy);
             objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-            final byte []  requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+            final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
 
             final InsertStudentsClientRequest clientRequest = new InsertStudentsClientRequest(
                     networkConfig,
@@ -60,7 +60,7 @@ public class StudentService {
         while (!clientRequests.isEmpty()) {
             final ClientRequest clientRequest = clientRequests.pop();
             clientRequest.join();
-            final Student guy = (Student)clientRequest.getInfo();
+            final Student guy = (Student) clientRequest.getInfo();
             logger.debug("Thread {} complete : {} {} {} --> {}",
                     clientRequest.getThreadName(),
                     guy.getFirstname(), guy.getName(), guy.getGroup(),
@@ -77,20 +77,19 @@ public class StudentService {
         request.setRequestId(requestId);
         request.setRequestOrder(selectRequestOrder);
         objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-        final byte []  requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
         LoggingUtils.logDataMultiLine(logger, Level.TRACE, requestBytes);
         final SelectAllStudentsClientRequest clientRequest = new SelectAllStudentsClientRequest(
                 networkConfig,
                 birthdate++, request, null, requestBytes);
         clientRequests.push(clientRequest);
 
-        if(!clientRequests.isEmpty()) {
+        if (!clientRequests.isEmpty()) {
             final ClientRequest joinedClientRequest = clientRequests.pop();
             joinedClientRequest.join();
             logger.debug("Thread {} complete.", joinedClientRequest.getThreadName());
             return (Students) joinedClientRequest.getResult();
-        }
-        else {
+        } else {
             logger.error("No students found");
             return null;
         }

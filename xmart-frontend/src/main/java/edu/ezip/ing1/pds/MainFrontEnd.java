@@ -1,12 +1,13 @@
 package edu.ezip.ing1.pds;
 
 import de.vandermeer.asciitable.AsciiTable;
-import edu.ezip.ing1.pds.business.dto.Student;
-import edu.ezip.ing1.pds.business.dto.Students;
+import edu.ezip.ing1.pds.business.dto.Patient;
+import edu.ezip.ing1.pds.business.dto.Patient;
+import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.ConfigLoader;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
-import edu.ezip.ing1.pds.services.StudentService;
+import edu.ezip.ing1.pds.services.PatientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,13 +26,13 @@ public class MainFrontEnd {
         final NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, networkConfigFile);
         logger.debug("Load Network config file : {}", networkConfig.toString());
 
-        final StudentService studentService = new StudentService(networkConfig);
-        studentService.insertStudents();
-        Students students = studentService.selectStudents();
+        final PatientService PatientService = new PatientService(networkConfig);
+        // PatientService.insertPatients();
+        Patients patients = PatientService.selectPatients();
         final AsciiTable asciiTable = new AsciiTable();
-        for (final Student student : students.getStudents()) {
+        for (final Patient patient : patients.getPatients()) {
             asciiTable.addRule();
-            asciiTable.addRow(student.getFirstname(), student.getName(), student.getGroup());
+            asciiTable.addRow(patient.getNom(), patient.getPrenom(), patient.getAge());
         }
         asciiTable.addRule();
         logger.debug("\n{}\n", asciiTable.render());

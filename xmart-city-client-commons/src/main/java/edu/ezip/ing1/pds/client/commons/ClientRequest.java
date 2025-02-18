@@ -2,7 +2,7 @@ package edu.ezip.ing1.pds.client.commons;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.ezip.commons.LoggingUtils;
-import edu.ezip.ing1.pds.business.dto.Students;
+import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.commons.Request;
 import edu.ezip.ing1.pds.commons.Response;
 import org.slf4j.Logger;
@@ -18,14 +18,14 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-public abstract class ClientRequest<N,S> implements Runnable {
+public abstract class ClientRequest<N, S> implements Runnable {
     private final Socket socket = new Socket();
     private final Thread self;
     private final NetworkConfig networkConfig;
     private static final String threadNamePrfx = "client_request";
     private InputStream instream;
     private OutputStream outstream;
-    private final byte [] bytes;
+    private final byte[] bytes;
     private static final int maxTimeLapToGetAClientReplyInMs = 5000;
     private static final int timeStepMs = 300;
     private final String threadName;
@@ -34,17 +34,16 @@ public abstract class ClientRequest<N,S> implements Runnable {
     private final BlockingDeque<Integer> waitArtifact = new LinkedBlockingDeque<Integer>(1);
     private final Request request;
     private final N info;
-    private  S result;
-
+    private S result;
 
     public ClientRequest(final NetworkConfig networkConfig,
-                         final int myBirthDate,
-                         final Request request,
-                         final N info,
-                         final byte [] bytes) throws IOException {
+            final int myBirthDate,
+            final Request request,
+            final N info,
+            final byte[] bytes) throws IOException {
         this.networkConfig = networkConfig;
         final StringBuffer threadNameBuffer = new StringBuffer();
-        threadNameBuffer.append(threadNamePrfx).append("★").append(String.format("%04d",myBirthDate));
+        threadNameBuffer.append(threadNamePrfx).append("★").append(String.format("%04d", myBirthDate));
         threadName = threadNameBuffer.toString();
         this.bytes = bytes;
         this.request = request;
@@ -53,6 +52,7 @@ public abstract class ClientRequest<N,S> implements Runnable {
         self.start();
 
     }
+
     @Override
     public void run() {
         try {
@@ -66,11 +66,12 @@ public abstract class ClientRequest<N,S> implements Runnable {
             int timeout = maxTimeLapToGetAClientReplyInMs;
             while (0 == instream.available() && 0 < timeout) {
                 waitArtifact.pollFirst(timeStepMs, TimeUnit.MILLISECONDS);
-                timeout-=timeStepMs;
+                timeout -= timeStepMs;
             }
-            if (0>timeout) return;
+            if (0 > timeout)
+                return;
 
-            final byte [] inputData = new byte[instream.available()];
+            final byte[] inputData = new byte[instream.available()];
             logger.trace("Bytes read = {}", inputData.length);
             instream.read(inputData);
             LoggingUtils.logDataMultiLine(logger, Level.TRACE, inputData);
@@ -88,13 +89,15 @@ public abstract class ClientRequest<N,S> implements Runnable {
         }
     }
 
-    public abstract  S readResult(final String body) throws IOException;
+    public abstract S readResult(final String body) throws IOException;
 
     public void join() throws InterruptedException {
         self.join();
     }
 
-    public final String getThreadName() {return threadName; }
+    public final String getThreadName() {
+        return threadName;
+    }
 
     public final N getInfo() {
         return info;

@@ -1,6 +1,5 @@
 package edu.ezip.ing1.pds;
 
-import de.vandermeer.asciitable.AsciiTable;
 import edu.ezip.ing1.pds.business.dto.Patient;
 import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ClientRequest;
@@ -10,6 +9,9 @@ import edu.ezip.ing1.pds.services.PatientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -35,15 +37,33 @@ public class MainFrontEnd {
         // Vérification de la validité de la réponse avant d'utiliser la collection de
         // patients
         if (patients != null && patients.getPatients() != null && !patients.getPatients().isEmpty()) {
-            final AsciiTable asciiTable = new AsciiTable();
+            // Créer un modèle de table pour afficher les patients
+            DefaultTableModel tableModel = new DefaultTableModel();
+            tableModel.addColumn("Nom");
+            tableModel.addColumn("Prénom");
+            tableModel.addColumn("Âge");
 
-            // Parcourir et afficher les patients dans un tableau ASCII
-            for (final Patient patient : patients.getPatients()) {
-                asciiTable.addRule();
-                asciiTable.addRow(patient.getNom(), patient.getPrenom(), patient.getAge());
+            // Ajouter les patients au modèle de table
+            for (Patient patient : patients.getPatients()) {
+                tableModel.addRow(new Object[] { patient.getNom(), patient.getPrenom(), patient.getAge() });
             }
-            asciiTable.addRule();
-            logger.debug("\n{}\n", asciiTable.render());
+
+            // Créer une JTable pour afficher les patients
+            JTable table = new JTable(tableModel);
+
+            // Créer un JScrollPane pour ajouter du défilement à la JTable
+            JScrollPane scrollPane = new JScrollPane(table);
+            table.setFillsViewportHeight(true);
+
+            // Créer une fenêtre JFrame pour afficher la table
+            JFrame frame = new JFrame("Liste des Patients");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setSize(500, 300);
+            frame.setLocationRelativeTo(null); // Centrer la fenêtre
+            frame.setLayout(new BorderLayout());
+            frame.add(scrollPane, BorderLayout.CENTER);
+            frame.setVisible(true);
+
         } else {
             // Message si aucun patient n'est trouvé ou si la collection est vide
             logger.debug("Aucun patient trouvé.");

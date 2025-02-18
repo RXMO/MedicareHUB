@@ -18,7 +18,7 @@ public class XMartCityService {
     private final Logger logger = LoggerFactory.getLogger(LoggingLabel);
 
     private enum Queries {
-        SELECT_ALL_PATIENTS("SELECT p.nom, p.prenom, p.age FROM patients p"),
+        SELECT_ALL_PATIENTS("SELECT nom, prenom, age FROM patients "),
         INSERT_PATIENT("INSERT INTO patients (nom, prenom, age) VALUES (?, ?, ?)");
 
         private final String query;
@@ -90,17 +90,24 @@ public class XMartCityService {
     private Response SelectAllPatients(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
-        final Statement stmt = connection.createStatement();
-        final ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_PATIENTS.query);
-        Patients patients = new Patients();
-        while (res.next()) {
-            Patient patient = new Patient();
-            patient.setNom(res.getString(1));
-            patient.setPrenom(res.getString(2));
-            patient.setAge(res.getInt(3));
-            patients.add(patient);
+        try (Statement stmt = connection.createStatement();
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_PATIENTS.query)) {
+
+            Patients patients = new Patients();
+            while (res.next()) {
+                Patient patient = new Patient();
+                patient.setNom(res.getString(1));
+                patient.setPrenom(res.getString(2));
+                patient.setAge(res.getInt(3));
+                patients.add(patient);
+            }
+
+            if (patients.getPatients().isEmpty()) {
+                return new Response(request.getRequestId(), "Aucun patient trouvé");
+            }
+
+            return new Response(request.getRequestId(), objectMapper.writeValueAsString(patients));
         }
-        return new Response(request.getRequestId(), objectMapper.writeValueAsString(patients));
     }
 
 }

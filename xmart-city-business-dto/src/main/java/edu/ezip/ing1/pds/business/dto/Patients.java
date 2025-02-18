@@ -7,29 +7,44 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+@JsonRootName("Patients")
 public class Patients {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("patients")
-    private Set<Patient> Patients = new LinkedHashSet<Patient>();
+    private Set<Patient> patients;
 
+    // Constructeur pour garantir l'initialisation de la collection
+    public Patients() {
+        this.patients = new LinkedHashSet<>();
+    }
+
+    // Getter
     public Set<Patient> getPatients() {
-        return Patients;
+        return patients;
     }
 
-    public void setPatients(Set<Patient> Patients) {
-        this.Patients = Patients;
+    // Setter
+    public void setPatients(Set<Patient> patients) {
+        if (patients != null) {
+            this.patients = patients;
+        } else {
+            this.patients = new LinkedHashSet<>(); // Initialisation par défaut si null
+        }
     }
 
-    public final Patients add(final Patient Patient) {
-        Patients.add(Patient);
+    // Méthode pour ajouter un patient
+    public Patients add(Patient patient) {
+        if (patient != null) {
+            patients.add(patient);
+        }
         return this;
     }
 
     @Override
     public String toString() {
         return "Patients{" +
-                "Patients=" + Patients +
+                "patients=" + patients +
                 '}';
     }
 }

@@ -27,7 +27,7 @@ public class PatientService {
     // "Patients-to-be-inserted.yaml";
 
     // final String insertRequestOrder = "INSERT_Patient";
-    final String selectRequestOrder = " SELECT_ALL_PATIENTS";
+    final String selectRequestOrder = "SELECT_ALL_PATIENTS";
 
     private final NetworkConfig networkConfig;
 
@@ -81,7 +81,7 @@ public class PatientService {
         final String requestId = UUID.randomUUID().toString();
         final Request request = new Request();
         request.setRequestId(requestId);
-        request.setRequestOrder(selectRequestOrder);
+        request.setRequestOrder(selectRequestOrder.trim());
         objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
         final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
         LoggingUtils.logDataMultiLine(logger, Level.TRACE, requestBytes);

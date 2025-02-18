@@ -7,29 +7,29 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class Students {
+public class Patients {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty("students")
-    private  Set<Student> students = new LinkedHashSet<Student>();
+    @JsonProperty("patients")
+    private Set<Patient> Patients = new LinkedHashSet<Patient>();
 
-    public Set<Student> getStudents() {
-        return students;
+    public Set<Patient> getPatients() {
+        return Patients;
     }
 
-    public void setStudents(Set<Student> students) {
-        this.students = students;
+    public void setPatients(Set<Patient> Patients) {
+        this.Patients = Patients;
     }
 
-    public final Students add (final Student student) {
-        students.add(student);
+    public final Patients add(final Patient Patient) {
+        Patients.add(Patient);
         return this;
     }
 
     @Override
     public String toString() {
-        return "Students{" +
-                "students=" + students +
+        return "Patients{" +
+                "Patients=" + Patients +
                 '}';
     }
 }

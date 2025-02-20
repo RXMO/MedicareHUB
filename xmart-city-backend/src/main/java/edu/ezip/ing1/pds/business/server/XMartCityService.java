@@ -19,7 +19,8 @@ public class XMartCityService {
 
     private enum Queries {
         SELECT_ALL_PATIENTS("SELECT nom, prenom, age FROM patients "),
-        INSERT_PATIENT("INSERT INTO patients (nom, prenom, age) VALUES (?, ?, ?)");
+        INSERT_PATIENT("INSERT INTO patients (nom, prenom, age) VALUES (?, ?, ?)"),
+        DELETE_PATIENT("DELETE FROM patients WHERE nom = ? AND prenom = ?");
 
         private final String query;
 
@@ -51,6 +52,10 @@ public class XMartCityService {
 
             case INSERT_PATIENT:
                 response = InsertPatient(request, connection);
+                break;
+
+            case DELETE_PATIENT:
+                response = DeletePatient(request, connection);
                 break;
 
             default:
@@ -104,6 +109,28 @@ public class XMartCityService {
             }
 
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(patients));
+        }
+    }
+
+    private Response DeletePatient(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Patient requestData = objectMapper.readValue(request.getRequestBody(), Patient.class);
+
+        String nom = requestData.getNom();
+        String prenom = requestData.getPrenom();
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_PATIENT.query)) {
+            pstmt.setString(1, nom);
+            pstmt.setString(2, prenom);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                return new Response(request.getRequestId(), "{\"message\": \"Patient supprimé avec succès\"}");
+            } else {
+                return new Response(request.getRequestId(), "{\"message\": \"Aucun patient trouvé à supprimer\"}");
+            }
         }
     }
 

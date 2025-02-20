@@ -51,6 +51,7 @@ public class PatientUI {
         JTextField ageField = new JTextField(5);
         JButton ajouterButton = new JButton("Ajouter");
         JButton afficherButton = new JButton("Afficher la liste");
+        JButton supprimerButton = new JButton("Supprimer"); // Nouveau bouton pour supprimer un patient
 
         // Panel pour le formulaire d'ajout
         JPanel formPanel = new JPanel();
@@ -62,8 +63,8 @@ public class PatientUI {
         formPanel.add(ageField);
         formPanel.add(ajouterButton);
         formPanel.add(afficherButton);
+        formPanel.add(supprimerButton); // Ajouter le bouton de suppression
 
-        // Action du bouton Ajouter
         // Action du bouton Ajouter
         ajouterButton.addActionListener(new ActionListener() {
             @Override
@@ -112,6 +113,38 @@ public class PatientUI {
 
         // Action du bouton Afficher
         afficherButton.addActionListener(e -> table.repaint());
+
+        // Action du bouton Supprimer
+        supprimerButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow != -1) {
+                // Récupérer le patient sélectionné
+                String nom = (String) tableModel.getValueAt(selectedRow, 0);
+                String prenom = (String) tableModel.getValueAt(selectedRow, 1);
+                int age = (int) tableModel.getValueAt(selectedRow, 2);
+
+                // Créer un objet Patient à supprimer
+                Patient patientToDelete = new Patient(nom, prenom, age);
+
+                try {
+                    // Appeler le service pour supprimer le patient
+                    patientService.DeletePatient(patientToDelete);
+
+                    // Supprimer la ligne de la table
+                    tableModel.removeRow(selectedRow);
+                } catch (IOException | InterruptedException ex) {
+                    // Capturer les exceptions IOException et InterruptedException
+                    JOptionPane.showMessageDialog(null, "Une erreur est survenue lors de la suppression du patient.",
+                            "Erreur",
+                            JOptionPane.ERROR_MESSAGE);
+                    logger.error("Erreur lors de la suppression du patient", ex);
+                }
+            } else {
+                // Afficher une erreur si aucune ligne n'est sélectionnée
+                JOptionPane.showMessageDialog(null, "Veuillez sélectionner un patient à supprimer.", "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         // Créer une fenêtre JFrame pour afficher la table et le formulaire
         JFrame frame = new JFrame("Gestion des Patients");

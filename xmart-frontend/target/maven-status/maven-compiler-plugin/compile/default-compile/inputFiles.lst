@@ -2,6 +2,7 @@
 /home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/requests/SelectAllPatientsClientRequest.java
 /home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/services/PatientService.java
 /home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/services/StudentService.java
+/home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/requests/DeletePatientClientRequest.java
 /home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/requests/InsertStudentsClientRequest.java
 /home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/MainFrontEnd.java
 /home/omar/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/PatientUI.java

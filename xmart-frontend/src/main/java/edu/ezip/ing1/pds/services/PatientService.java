@@ -20,6 +20,7 @@ import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
 import edu.ezip.ing1.pds.requests.InsertPatientClientRequest;
 import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest;
+import edu.ezip.ing1.pds.requests.DeletePatientClientRequest; // Import de la requête pour la suppression
 
 public class PatientService {
 
@@ -28,7 +29,7 @@ public class PatientService {
 
     final String insertRequestOrder = "INSERT_PATIENT";
     final String selectRequestOrder = "SELECT_ALL_PATIENTS";
-    final String deleteRequestOrder = "DELETE_PATIENT";
+    final String deleteRequestOrder = "DELETE_PATIENT"; // Ajout de l'ordre de requête pour la suppression
 
     private final NetworkConfig networkConfig;
 
@@ -38,6 +39,11 @@ public class PatientService {
 
     public void InsertPatient(Patient patient) throws InterruptedException, IOException {
         processPatient(patient, insertRequestOrder);
+    }
+
+    public void DeletePatient(Patient patient) throws InterruptedException, IOException { // Nouvelle méthode pour
+                                                                                          // supprimer un patient
+        processPatient(patient, deleteRequestOrder);
     }
 
     private void processPatient(Patient patient, String requestOrder) throws InterruptedException, IOException {
@@ -55,8 +61,17 @@ public class PatientService {
         objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
         final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
 
-        final InsertPatientClientRequest patientRequest = new InsertPatientClientRequest(
-                networkConfig, 0, request, patient, requestBytes);
+        ClientRequest patientRequest = null;
+
+        // Sélectionner le bon type de requête selon l'opération
+        if (requestOrder.equals(insertRequestOrder)) {
+            patientRequest = new InsertPatientClientRequest(networkConfig, 0, request, patient, requestBytes);
+        } else if (requestOrder.equals(deleteRequestOrder)) {
+            patientRequest = new DeletePatientClientRequest(networkConfig, 0, request, patient, requestBytes); // Requête
+                                                                                                               // pour
+                                                                                                               // supprimer
+        }
+
         patientRequests.push(patientRequest);
 
         while (!patientRequests.isEmpty()) {

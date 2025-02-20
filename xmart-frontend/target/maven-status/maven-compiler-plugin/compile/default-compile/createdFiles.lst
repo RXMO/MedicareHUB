@@ -1,3 +1,6 @@
-edu/ezip/ing1/pds/services/PatientService.class
-edu/ezip/ing1/pds/MainFrontEnd.class
+edu/ezip/ing1/pds/PatientUI.class
 edu/ezip/ing1/pds/requests/SelectAllPatientsClientRequest.class
+edu/ezip/ing1/pds/PatientUI$1.class
+edu/ezip/ing1/pds/services/PatientService.class
+edu/ezip/ing1/pds/requests/InsertPatientClientRequest.class
+edu/ezip/ing1/pds/MainFrontEnd.class

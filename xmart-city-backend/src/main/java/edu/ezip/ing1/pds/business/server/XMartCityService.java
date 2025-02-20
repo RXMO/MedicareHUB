@@ -48,45 +48,42 @@ public class XMartCityService {
             case SELECT_ALL_PATIENTS:
                 response = SelectAllPatients(request, connection);
                 break;
-            /*
-             * case INSERT_PATIENT:
-             * response = InsertPatient(request, connection);
-             * break;
-             */
+
+            case INSERT_PATIENT:
+                response = InsertPatient(request, connection);
+                break;
+
             default:
                 break;
         }
         return response;
     }
 
-    /*
-     * private Response InsertPatient(final Request request, final Connection
-     * connection)
-     * throws SQLException, IOException {
-     * final ObjectMapper objectMapper = new ObjectMapper();
-     * Patient requestData = objectMapper.readValue(request.getRequestBody(),
-     * Patient.class);
-     * 
-     * String nom = requestData.getNom();
-     * String prenom = requestData.getPrenom();
-     * int age = requestData.getAge();
-     * 
-     * try (PreparedStatement pstmt =
-     * connection.prepareStatement(Queries.INSERT_PATIENT.query)) {
-     * pstmt.setString(1, nom);
-     * pstmt.setString(2, prenom);
-     * pstmt.setInt(3, age);
-     * 
-     * int rowsAffected = pstmt.executeUpdate();
-     * 
-     * if (rowsAffected > 0) {
-     * return new Response(request.getRequestId(), "Patient ajouté avec succès");
-     * } else {
-     * return new Response(request.getRequestId(), "Échec de l'ajout du patient");
-     * }
-     * }
-     * }
-     */
+    private Response InsertPatient(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Patient requestData = objectMapper.readValue(request.getRequestBody(),
+                Patient.class);
+
+        String nom = requestData.getNom();
+        String prenom = requestData.getPrenom();
+        int age = requestData.getAge();
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_PATIENT.query)) {
+            pstmt.setString(1, nom);
+            pstmt.setString(2, prenom);
+            pstmt.setInt(3, age);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                return new Response(request.getRequestId(), "{\"message\": \"Patient ajouté avec succès\"}");
+            } else {
+                return new Response(request.getRequestId(), "{\"message\": \"Échec de l'ajout du patient\"}");
+            }
+        }
+    }
+
     private Response SelectAllPatients(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();

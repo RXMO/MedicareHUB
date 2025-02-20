@@ -4,6 +4,10 @@ import java.lang.reflect.Field;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonRootName;
+
+@JsonRootName(value = "patient")
 
 public class Patient {
     private String nom;
@@ -42,13 +46,19 @@ public class Patient {
         return age;
     }
 
+    @JsonProperty("nom")
+
     public void setNom(String nom) {
         this.nom = nom;
     }
 
+    @JsonProperty("prenom")
+
     public void setPrenom(String prenom) {
         this.prenom = prenom;
     }
+
+    @JsonProperty("age")
 
     public void setAge(int age) {
         this.age = age;

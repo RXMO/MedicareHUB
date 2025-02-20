@@ -20,8 +20,7 @@ public class InsertPatientClientRequest extends ClientRequest<Patient, String> {
     @Override
     public String readResult(String body) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
-        final Map<String, Integer> patientIdMap = mapper.readValue(body, Map.class);
-        final String result = patientIdMap.get("patient_id").toString();
-        return result;
+        final Map<String, String> responseMap = mapper.readValue(body, Map.class);
+        return responseMap.get("message"); // Assurez-vous que le serveur renvoie un message dans la réponse
     }
 }

@@ -1,104 +1,99 @@
 package edu.ezip.ing1.pds.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import edu.ezip.commons.LoggingUtils;
-import edu.ezip.ing1.pds.business.dto.Patient;
-import edu.ezip.ing1.pds.business.dto.Patients;
-import edu.ezip.ing1.pds.client.commons.ClientRequest;
-import edu.ezip.ing1.pds.client.commons.ConfigLoader;
-import edu.ezip.ing1.pds.client.commons.NetworkConfig;
-import edu.ezip.ing1.pds.commons.Request;
-//import edu.ezip.ing1.pds.requests.InsertStudentsClientRequest;
-import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
-
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import edu.ezip.commons.LoggingUtils;
+import edu.ezip.ing1.pds.business.dto.Patient;
+import edu.ezip.ing1.pds.business.dto.Patients;
+import edu.ezip.ing1.pds.client.commons.ClientRequest;
+import edu.ezip.ing1.pds.client.commons.NetworkConfig;
+import edu.ezip.ing1.pds.commons.Request;
+import edu.ezip.ing1.pds.requests.InsertPatientClientRequest;
+import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest;
+
 public class PatientService {
+
     private final static String LoggingLabel = "FrontEnd - PatientService";
     private final static Logger logger = LoggerFactory.getLogger(LoggingLabel);
-    // private final static String PatientsToBeInserted =
-    // "Patients-to-be-inserted.yaml";
 
-    // final String insertRequestOrder = "INSERT_Patient";
+    final String insertRequestOrder = "INSERT_PATIENT";
     final String selectRequestOrder = "SELECT_ALL_PATIENTS";
+    final String deleteRequestOrder = "DELETE_PATIENT";
 
     private final NetworkConfig networkConfig;
 
     public PatientService(NetworkConfig networkConfig) {
         this.networkConfig = networkConfig;
     }
-    /*
-     * public void insertPatients() throws InterruptedException, IOException {
-     * final Deque<ClientRequest> clientRequests = new ArrayDeque<ClientRequest>();
-     * final Patients guys = ConfigLoader.loadConfig(Patients.class,
-     * PatientsToBeInserted);
-     * 
-     * int birthdate = 0;
-     * for (final Patient guy : guys.getPatients()) {
-     * final ObjectMapper objectMapper = new ObjectMapper();
-     * final String jsonifiedGuy =
-     * objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(guy);
-     * logger.trace("Patient with its JSON face : {}", jsonifiedGuy);
-     * final String requestId = UUID.randomUUID().toString();
-     * final Request request = new Request();
-     * request.setRequestId(requestId);
-     * request.setRequestOrder(insertRequestOrder);
-     * request.setRequestContent(jsonifiedGuy);
-     * objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-     * final byte[] requestBytes =
-     * objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
-     * 
-     * final InsertPatientsClientRequest clientRequest = new
-     * InsertPatientsClientRequest(
-     * networkConfig,
-     * birthdate++, request, guy, requestBytes);
-     * clientRequests.push(clientRequest);
-     * }
-     * 
-     * while (!clientRequests.isEmpty()) {
-     * final ClientRequest clientRequest = clientRequests.pop();
-     * clientRequest.join();
-     * final Patient guy = (Patient) clientRequest.getInfo();
-     * logger.debug("Thread {} complete : {} {} {} --> {}",
-     * clientRequest.getThreadName(),
-     * guy.getFirstname(), guy.getName(), guy.getGroup(),
-     * clientRequest.getResult());
-     * }
-     * }
-     */
 
-    public Patients selectPatients() throws InterruptedException, IOException {
-        int birthdate = 0;
-        final Deque<ClientRequest> clientRequests = new ArrayDeque<ClientRequest>();
+    public void InsertPatient(Patient patient) throws InterruptedException, IOException {
+        processPatient(patient, insertRequestOrder);
+    }
+
+    private void processPatient(Patient patient, String requestOrder) throws InterruptedException, IOException {
+        final Deque<ClientRequest> patientRequests = new ArrayDeque<>();
+
         final ObjectMapper objectMapper = new ObjectMapper();
+        final String jsonifiedPatient = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(patient);
+        logger.trace("Patient with its JSON face : {}", jsonifiedPatient);
+
         final String requestId = UUID.randomUUID().toString();
         final Request request = new Request();
         request.setRequestId(requestId);
-        request.setRequestOrder(selectRequestOrder.trim());
+        request.setRequestOrder(requestOrder);
+        request.setRequestContent(jsonifiedPatient);
         objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
         final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
-        LoggingUtils.logDataMultiLine(logger, Level.TRACE, requestBytes);
-        final SelectAllPatientsClientRequest clientRequest = new SelectAllPatientsClientRequest(
-                networkConfig,
-                birthdate++, request, null, requestBytes);
-        clientRequests.push(clientRequest);
 
-        if (!clientRequests.isEmpty()) {
-            final ClientRequest joinedClientRequest = clientRequests.pop();
-            joinedClientRequest.join();
-            logger.debug("Thread {} complete.", joinedClientRequest.getThreadName());
-            return (Patients) joinedClientRequest.getResult();
-        } else {
-            logger.error("No Patients found");
-            return null;
+        final InsertPatientClientRequest patientRequest = new InsertPatientClientRequest(
+                networkConfig, 0, request, patient, requestBytes);
+        patientRequests.push(patientRequest);
+
+        while (!patientRequests.isEmpty()) {
+            final ClientRequest processedRequest = patientRequests.pop();
+            processedRequest.join();
+            final Patient processedPatient = (Patient) processedRequest.getInfo();
+            logger.debug("Thread {} complete : {} {} --> {}",
+                    processedRequest.getThreadName(),
+                    processedPatient.getNom(), processedPatient.getPrenom(), processedPatient.getAge(),
+                    processedRequest.getResult());
         }
     }
 
+    public Patients selectPatients() throws InterruptedException, IOException {
+        final Deque<ClientRequest> patientRequests = new ArrayDeque<>();
+        final ObjectMapper objectMapper = new ObjectMapper();
+
+        final String requestId = UUID.randomUUID().toString();
+        final Request request = new Request();
+        request.setRequestId(requestId);
+        request.setRequestOrder(selectRequestOrder);
+        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+        LoggingUtils.logDataMultiLine(logger, Level.TRACE, requestBytes);
+
+        final SelectAllPatientsClientRequest patientRequest = new SelectAllPatientsClientRequest(
+                networkConfig, 0, request, null, requestBytes);
+        patientRequests.push(patientRequest);
+
+        if (!patientRequests.isEmpty()) {
+            final ClientRequest joinedPatientRequest = patientRequests.pop();
+            joinedPatientRequest.join();
+            logger.debug("Thread {} complete.", joinedPatientRequest.getThreadName());
+            return (Patients) joinedPatientRequest.getResult();
+        } else {
+            logger.error("No patients found");
+            return null;
+        }
+    }
 }

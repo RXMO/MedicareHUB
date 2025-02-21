@@ -13,6 +13,7 @@ import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ConfigLoader;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.frontend.FenetreDiagnostic;
+import edu.ezip.ing1.pds.frontend.OrdonnanceFrontEnd;
 import edu.ezip.ing1.pds.services.PatientService;
 
 public class MainFrontEnd {
@@ -43,7 +44,7 @@ public class MainFrontEnd {
         JButton btnOmar = new JButton("Omar");
         JButton btnAfrah = new JButton("Afrah");
         JButton btnEmna = new JButton("Emna");
-
+btnEmna.addActionListener(e -> new OrdonnanceFrontEnd());
         // ActionListener pour le bouton Omar
         btnOmar.addActionListener(e -> new PatientUI(patients, patientService));
 

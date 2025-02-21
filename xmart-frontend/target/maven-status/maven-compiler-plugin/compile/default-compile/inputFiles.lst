@@ -1,9 +1,18 @@
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\frontend\FenetreDiagnostic.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\MainFrontEnd.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\PatientUI.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\DeletePatientClientRequest.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\InsertPatientClientRequest.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\InsertStudentsClientRequest.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\SelectAllPatientsClientRequest.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\services\PatientService.java
-C:\Users\afrah\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\services\StudentService.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\frontend\FenetreDiagnostic.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\frontend\OrdonnanceFrontEnd.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\frontend\OrdonnanceTableModel.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\MainFrontEnd.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\PatientUI.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\DeleteOrdonnanceRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\DeletePatientClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\InsertMedicamentClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\InsertOrdonnanceClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\InsertPatientClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\InsertStudentsClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\SelectAllMedicamentsClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\SelectAllOrdonnancesClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\requests\SelectAllPatientsClientRequest.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\services\MedicamentService.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\services\OrdonnanceService.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\services\PatientService.java
+C:\Users\ouelbani emna\MedicareHUB\xmart-frontend\src\main\java\edu\ezip\ing1\pds\services\StudentService.java

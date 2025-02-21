@@ -96,7 +96,7 @@ public class ConnectionPoolImpl {
         return connections.size();
     }
 
-    public final Connection get() {
+    public final static Connection get() {
         return connections.pollFirst();
     }
 

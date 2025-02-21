@@ -18,7 +18,7 @@ public class Maladie {
         this.id = id; 
     }
     public String getNom() { return nom; }
-    public List<Symptome> getSymptômes() { return symptomes; }
+    public List<Symptome> getSymptomes() { return symptomes; }
 
     @Override
     public String toString() {

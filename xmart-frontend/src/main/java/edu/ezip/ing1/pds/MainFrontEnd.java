@@ -6,6 +6,11 @@ import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.services.PatientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 
 public class MainFrontEnd {
@@ -23,7 +28,33 @@ public class MainFrontEnd {
         final PatientService patientService = new PatientService(networkConfig);
         Patients patients = patientService.selectPatients();
 
-        // Lancer l'interface graphique
-        new PatientUI(patients, patientService); // Ajout de patientService
+        // Lancer l'interface graphique avec les boutons
+        createUI(patients, patientService);
+    }
+
+    private static void createUI(Patients patients, PatientService patientService) {
+        JFrame frame = new JFrame("Interface");
+        frame.setSize(300, 200);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new FlowLayout());
+
+        JButton btnOmar = new JButton("Omar");
+        JButton btnAfrah = new JButton("Afrah");
+        JButton btnEmna = new JButton("Emna");
+
+        // ActionListener pour le bouton Omar
+        btnOmar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new PatientUI(patients, patientService); // Afficher PatientUI
+            }
+        });
+
+        // Ajouter les boutons à l'interface
+        frame.add(btnOmar);
+        frame.add(btnAfrah);
+        frame.add(btnEmna);
+
+        frame.setVisible(true);
     }
 }

@@ -31,12 +31,15 @@ public class XMartCityService {
         INSERT_PATIENT("INSERT INTO patients (nom, prenom, age) VALUES (?, ?, ?)"),
         DELETE_PATIENT("DELETE FROM patients WHERE nom = ? AND prenom = ?"),
         SELECT_ALL_ORDONNANCES("SELECT * FROM Ordonnance"),
-        INSERT_ORDONNANCE("INSERT INTO Ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
-        DELETE_ORDONNANCE("DELETE FROM Ordonnance WHERE id_ordonnance = ?"),
+        INSERT_ORDONNANCE(
+                "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
+        DELETE_ORDONNANCE("DELETE FROM ordonnance WHERE id_ordonnance = ?"),
         INSERT_PRESCRIPTION("INSERT INTO Prescription (id_ordonnance, id_medicament, posologie) VALUES (?, ?, ?)"),
-        SELECT_PRESCRIPTION_PAR_ORDONNANCE("SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
-                                           "JOIN Medicaments m ON p.id_medicament = m.id_medicament " +
-                                           "WHERE p.id_ordonnance = ?");
+        SELECT_PRESCRIPTION_PAR_ORDONNANCE(
+                "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
+                        "JOIN Medicaments m ON p.id_medicament = m.id_medicament " +
+                        "WHERE p.id_ordonnance = ?");
+
         private final String query;
 
         private Queries(final String query) {
@@ -72,7 +75,7 @@ public class XMartCityService {
             case DELETE_PATIENT:
                 response = DeletePatient(request, connection);
                 break;
-                case SELECT_ALL_ORDONNANCES:
+            case SELECT_ALL_ORDONNANCES:
                 response = SelectAllOrdonnances(request, connection);
                 break;
             case INSERT_ORDONNANCE:
@@ -81,7 +84,6 @@ public class XMartCityService {
             case DELETE_ORDONNANCE:
                 response = DeleteOrdonnance(request, connection);
                 break;
-            
 
             default:
                 break;
@@ -158,11 +160,12 @@ public class XMartCityService {
             }
         }
     }
+
     private Response SelectAllOrdonnances(final Request request, final Connection connection)
-        throws SQLException, JsonProcessingException {
+            throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
-             ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_ORDONNANCES.query)) {
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_ORDONNANCES.query)) {
 
             Ordonnances ordonnances = new Ordonnances();
 
@@ -174,16 +177,15 @@ public class XMartCityService {
                 ordonnance.setIdMedecin(res.getInt("id_medecin"));
                 ordonnance.setIdConsultation(res.getInt("id_consultation"));
 
-                
-                try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PRESCRIPTION_PAR_ORDONNANCE.query)) {
+                try (PreparedStatement pstmt = connection
+                        .prepareStatement(Queries.SELECT_PRESCRIPTION_PAR_ORDONNANCE.query)) {
                     pstmt.setInt(1, ordonnance.getIdOrdonnance());
                     ResultSet resPrescriptions = pstmt.executeQuery();
                     while (resPrescriptions.next()) {
                         Prescription prescription = new Prescription(
-                            resPrescriptions.getInt("id_ordonnance"),
-                            resPrescriptions.getInt("id_medicament"),
-                            resPrescriptions.getString("posologie")
-                    );
+                                resPrescriptions.getInt("id_ordonnance"),
+                                resPrescriptions.getInt("id_medicament"),
+                                resPrescriptions.getString("posologie"));
 
                         ordonnance.addPrescription(prescription);
                     }
@@ -192,42 +194,41 @@ public class XMartCityService {
                 ordonnances.addOrdonnance(ordonnance);
             }
 
-            return new Response(request.getRequestId(), ordonnances.getOrdonnances().isEmpty() ? 
-                    "Aucune ordonnance trouvée" : objectMapper.writeValueAsString(ordonnances));
+            return new Response(request.getRequestId(),
+                    ordonnances.getOrdonnances().isEmpty() ? "Aucune ordonnance trouvée"
+                            : objectMapper.writeValueAsString(ordonnances));
         }
     }
 
     private Response DeleteOrdonnance(final Request request, final Connection connection)
-        throws SQLException, JsonProcessingException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    Ordonnance ordonnance = null;
-    try {
-        ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
-    } catch (IOException e) {
-        
-        
-        return new Response(request.getRequestId(), "Erreur lors de la lecture de l'ordonnance");
-    }
-    
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Ordonnance ordonnance = null;
+        try {
+            ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
+        } catch (IOException e) {
 
-    try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_ORDONNANCE.query)) {
-        pstmt.setInt(1, ordonnance.getIdOrdonnance());
-        int rowsAffected = pstmt.executeUpdate();
-        if (rowsAffected > 0) {
-            return new Response(request.getRequestId(), "Ordonnance supprimée avec succès");
-        } else {
-            return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour suppression");
+            return new Response(request.getRequestId(), "Erreur lors de la lecture de l'ordonnance");
+        }
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_ORDONNANCE.query)) {
+            pstmt.setInt(1, ordonnance.getIdOrdonnance());
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                return new Response(request.getRequestId(), "Ordonnance supprimée avec succès");
+            } else {
+                return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour suppression");
+            }
         }
     }
-}
-
 
     private Response InsertOrdonnance(final Request request, final Connection connection)
             throws SQLException, IOException {
         final ObjectMapper objectMapper = new ObjectMapper();
         Ordonnance ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
 
-        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_ORDONNANCE.query, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_ORDONNANCE.query,
+                Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, ordonnance.getDescription());
             pstmt.setInt(2, ordonnance.getIdPatient());
             pstmt.setInt(3, ordonnance.getIdMedecin());

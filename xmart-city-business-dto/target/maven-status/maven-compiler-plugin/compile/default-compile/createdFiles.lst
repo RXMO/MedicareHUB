@@ -1,8 +1,8 @@
-edu\ezip\ing1\pds\business\dto\Patient.class
-edu\ezip\ing1\pds\business\dto\Patients.class
-edu\ezip\ing1\pds\business\dto\Ordonnance.class
-edu\ezip\ing1\pds\business\dto\Ordonnances.class
-edu\ezip\ing1\pds\business\dto\Prescription.class
-edu\ezip\ing1\pds\business\dto\Maladie.class
-edu\ezip\ing1\pds\business\dto\Medicament.class
-edu\ezip\ing1\pds\business\dto\Symptome.class
+edu/ezip/ing1/pds/business/dto/Patient.class
+edu/ezip/ing1/pds/business/dto/Prescription.class
+edu/ezip/ing1/pds/business/dto/Medicament.class
+edu/ezip/ing1/pds/business/dto/Symptome.class
+edu/ezip/ing1/pds/business/dto/Ordonnances.class
+edu/ezip/ing1/pds/business/dto/Patients.class
+edu/ezip/ing1/pds/business/dto/Maladie.class
+edu/ezip/ing1/pds/business/dto/Ordonnance.class

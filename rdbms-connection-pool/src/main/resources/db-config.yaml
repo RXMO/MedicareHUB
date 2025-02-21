@@ -1,6 +1,6 @@
-databaseName: "pds_medical"
+databaseName: "crud_patients"
 host: "127.0.0.1"
-port: 3308
+port: 3307
 username: "root"
-password: ""
+password: "omar"
 poolSize: 1

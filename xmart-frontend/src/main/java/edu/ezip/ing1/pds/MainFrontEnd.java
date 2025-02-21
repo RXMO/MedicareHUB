@@ -1,17 +1,19 @@
 package edu.ezip.ing1.pds;
 
-import edu.ezip.ing1.pds.business.dto.Patients;
-import edu.ezip.ing1.pds.client.commons.ConfigLoader;
-import edu.ezip.ing1.pds.client.commons.NetworkConfig;
-import edu.ezip.ing1.pds.services.PatientService;
+import java.awt.FlowLayout;
+import java.io.IOException;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.IOException;
+import edu.ezip.ing1.pds.business.dto.Patients;
+import edu.ezip.ing1.pds.client.commons.ConfigLoader;
+import edu.ezip.ing1.pds.client.commons.NetworkConfig;
+import edu.ezip.ing1.pds.frontend.FenetreDiagnostic;
+import edu.ezip.ing1.pds.services.PatientService;
 
 public class MainFrontEnd {
 
@@ -43,12 +45,16 @@ public class MainFrontEnd {
         JButton btnEmna = new JButton("Emna");
 
         // ActionListener pour le bouton Omar
-        btnOmar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                new PatientUI(patients, patientService); // Afficher PatientUI
-            }
+        btnOmar.addActionListener(e -> new PatientUI(patients, patientService));
+
+        // ActionListener pour le bouton Afrah (ouvre l'interface FenetreDiagnostic)
+        btnAfrah.addActionListener(e -> {
+            FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
+            fenetreDiagnostic.setVisible(true);  // Affiche la fenêtre directement ici
+            fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
         });
+
+        // ActionListener pour le bouton Emna (ouvre l'interface OrdonnanceFrontEnd)
 
         // Ajouter les boutons à l'interface
         frame.add(btnOmar);
@@ -56,5 +62,5 @@ public class MainFrontEnd {
         frame.add(btnEmna);
 
         frame.setVisible(true);
-    }
+}
 }

@@ -43,25 +43,11 @@ public class OrdonnanceService {
         processOrdonnance(ordonnance, insertRequestOrder, medicamentsSelectionnes);
     }
 
-    
-    /*public void deleteOrdonnanceById(int idOrdonnance) throws Exception {
-        String query = "DELETE FROM Ordonnance WHERE idOrdonnance = ?";
-    
-        try (Connection connection = ConnectionPoolImpl.get();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            
-            preparedStatement.setInt(1, idOrdonnance);
-            int rowsAffected = preparedStatement.executeUpdate();
-            
-            if (rowsAffected == 0) {
-                throw new Exception("Aucune ordonnance trouvée avec l'ID " + idOrdonnance);
-            } else {
-                logger.info("Ordonnance avec l'ID {} supprimée avec succès.", idOrdonnance);
-            }
-        }
-    }*/
 
-    
+    public void deleteOrdonnance(Ordonnance ordonnance) throws InterruptedException, IOException {
+        processOrdonnance(ordonnance, deleteRequestOrder, null);
+    }
+
     private void processOrdonnance(Ordonnance ordonnance, String requestOrder, List<String> medicamentsSelectionnes) throws InterruptedException, IOException {
         final Deque<ClientRequest> clientRequests = new ArrayDeque<>();
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -133,4 +119,9 @@ public class OrdonnanceService {
             return null;
         }
     }
+
+    public void insertOrdonnance(Ordonnance ordonnance) throws InterruptedException, IOException {
+        processOrdonnance(ordonnance, insertRequestOrder, null);
+    }
+    
 }

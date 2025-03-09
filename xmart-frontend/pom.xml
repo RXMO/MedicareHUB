@@ -54,17 +54,11 @@
         </dependency>
 
         <dependency>
-            <groupId>edu.ezip.ing1.pds</groupId>
-            <artifactId>xmart-zity-backend</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-
-        <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.1.7</version>
         </dependency>
-
+    
         <dependency>
             <groupId>edu.ezip.ing1.pds.commons</groupId>
             <artifactId>xmart-city-commons</artifactId>
@@ -88,6 +82,12 @@
             <artifactId>xmart-city-client-commons</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>edu.ezip.commons</groupId>
+           <artifactId>rdbms-connection-pool</artifactId>
+          <version>1.0-SNAPSHOT</version>
+       </dependency>
+
 
         <dependency>
             <groupId>de.vandermeer</groupId>
@@ -95,13 +95,14 @@
             <version>0.3.2</version>
         </dependency>
 
+        <!-- Dépendance pour utiliser Swing (inclus dans le JDK, donc cette ligne peut être omise si tu utilises Java 8 ou plus récent) -->
         <dependency>
             <groupId>org.swinglabs</groupId>
             <artifactId>swingx</artifactId>
             <version>1.6.1</version>
             <scope>compile</scope>
         </dependency>
-
+        
     </dependencies>
 
 </project>

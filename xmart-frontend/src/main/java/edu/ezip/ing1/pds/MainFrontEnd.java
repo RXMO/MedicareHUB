@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,16 @@ public class MainFrontEnd {
         JButton btnOmar = new JButton("Omar");
         JButton btnAfrah = new JButton("Afrah");
         JButton btnEmna = new JButton("Emna");
-btnEmna.addActionListener(e -> new OrdonnanceFrontEnd());
+        btnEmna.addActionListener(e -> {
+            try {
+                new OrdonnanceFrontEnd();
+            } 
+            catch (InterruptedException | IOException ex) {
+                JOptionPane.showMessageDialog(null, "Erreur lors de l'ouverture de l'interface ordonnance : " + ex.getMessage());
+                ex.printStackTrace();
+            }
+});
+
         // ActionListener pour le bouton Omar
         btnOmar.addActionListener(e -> new PatientUI(patients, patientService));
 

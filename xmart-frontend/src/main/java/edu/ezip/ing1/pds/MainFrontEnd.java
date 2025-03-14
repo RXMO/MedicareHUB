@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ConfigLoader;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
-import edu.ezip.ing1.pds.frontend.FenetreDiagnostic;
+/*import edu.ezip.ing1.pds.frontend.FenetreDiagnostic;*/
 import edu.ezip.ing1.pds.frontend.OrdonnanceFrontEnd;
 import edu.ezip.ing1.pds.services.PatientService;
 
@@ -48,22 +48,24 @@ public class MainFrontEnd {
         btnEmna.addActionListener(e -> {
             try {
                 new OrdonnanceFrontEnd();
-            } 
-            catch (InterruptedException | IOException ex) {
-                JOptionPane.showMessageDialog(null, "Erreur lors de l'ouverture de l'interface ordonnance : " + ex.getMessage());
+            } catch (InterruptedException | IOException ex) {
+                JOptionPane.showMessageDialog(null,
+                        "Erreur lors de l'ouverture de l'interface ordonnance : " + ex.getMessage());
                 ex.printStackTrace();
             }
-});
+        });
 
         // ActionListener pour le bouton Omar
         btnOmar.addActionListener(e -> new PatientUI(patients, patientService));
 
-        // ActionListener pour le bouton Afrah (ouvre l'interface FenetreDiagnostic)
-        btnAfrah.addActionListener(e -> {
-            FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
-            fenetreDiagnostic.setVisible(true);  // Affiche la fenêtre directement ici
-            fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
-        });
+        /*
+         * // ActionListener pour le bouton Afrah (ouvre l'interface FenetreDiagnostic)
+         * btnAfrah.addActionListener(e -> {
+         * FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
+         * fenetreDiagnostic.setVisible(true); // Affiche la fenêtre directement ici
+         * fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
+         * });
+         */
 
         // ActionListener pour le bouton Emna (ouvre l'interface OrdonnanceFrontEnd)
 
@@ -73,5 +75,5 @@ public class MainFrontEnd {
         frame.add(btnEmna);
 
         frame.setVisible(true);
-}
+    }
 }

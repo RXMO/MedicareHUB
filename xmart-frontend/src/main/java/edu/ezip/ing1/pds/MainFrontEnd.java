@@ -86,6 +86,6 @@ public class MainFrontEnd {
         frame.add(btnEmna);
 
         frame.setVisible(true);
-}
+    }
 }
 

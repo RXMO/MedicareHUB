@@ -29,9 +29,10 @@ public class XMartCityService {
     private final Logger logger = LoggerFactory.getLogger(LoggingLabel);
 
     private enum Queries {
-        SELECT_ALL_PATIENTS("SELECT nom, prenom, age FROM patients "),
-        INSERT_PATIENT("INSERT INTO patients (nom, prenom, age) VALUES (?, ?, ?)"),
-        DELETE_PATIENT("DELETE FROM patients WHERE nom = ? AND prenom = ?"),
+        SELECT_ALL_PATIENTS("SELECT id_patient, nom_patient, prenom_patient, num_tel, allergies FROM Patients "),
+        INSERT_PATIENT(
+                "INSERT INTO Patients (id_patient,nom_patient, prenom_patient, num_tel, allergies) VALUES (?,?, ?, ?, ?)"),
+        DELETE_PATIENT("DELETE FROM Patients WHERE id_patient = ?"),
         SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance"),
         INSERT_ORDONNANCE(
                 "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
@@ -42,7 +43,7 @@ public class XMartCityService {
                 "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
                         "JOIN medicament m ON p.id_medicament = m.id_medicament " +
                         "WHERE p.id_ordonnance = ?");
-         
+
         private final String query;
 
         private Queries(final String query) {
@@ -90,7 +91,6 @@ public class XMartCityService {
             case SELECT_ALL_MEDICAMENTS:
                 response = SelectAllMedicaments(request, connection);
                 break;
-            
 
             default:
                 break;
@@ -104,14 +104,18 @@ public class XMartCityService {
         Patient requestData = objectMapper.readValue(request.getRequestBody(),
                 Patient.class);
 
-        String nom = requestData.getNom();
-        String prenom = requestData.getPrenom();
-        int age = requestData.getAge();
+        String nomPatient = requestData.getNomPatient();
+        String prenomPatient = requestData.getPrenomPatient();
+        String numTel = requestData.getNumTel();
+        String allergies = requestData.getAllergies();
+        int idPatient = requestData.getIdPatient();
 
         try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_PATIENT.query)) {
-            pstmt.setString(1, nom);
-            pstmt.setString(2, prenom);
-            pstmt.setInt(3, age);
+            pstmt.setInt(1, idPatient);
+            pstmt.setString(2, nomPatient);
+            pstmt.setString(3, prenomPatient);
+            pstmt.setString(4, numTel);
+            pstmt.setString(5, allergies);
 
             int rowsAffected = pstmt.executeUpdate();
 
@@ -132,9 +136,11 @@ public class XMartCityService {
             Patients patients = new Patients();
             while (res.next()) {
                 Patient patient = new Patient();
-                patient.setNom(res.getString(1));
-                patient.setPrenom(res.getString(2));
-                patient.setAge(res.getInt(3));
+                patient.setIdPatient(res.getInt("id_patient"));
+                patient.setNomPatient(res.getString("nom_patient"));
+                patient.setPrenomPatient(res.getString("prenom_patient"));
+                patient.setNumTel(res.getString("num_tel"));
+                patient.setAllergies(res.getString("allergies"));
                 patients.add(patient);
             }
 
@@ -151,12 +157,10 @@ public class XMartCityService {
         final ObjectMapper objectMapper = new ObjectMapper();
         Patient requestData = objectMapper.readValue(request.getRequestBody(), Patient.class);
 
-        String nom = requestData.getNom();
-        String prenom = requestData.getPrenom();
+        int idPatient = requestData.getIdPatient();
 
         try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_PATIENT.query)) {
-            pstmt.setString(1, nom);
-            pstmt.setString(2, prenom);
+            pstmt.setInt(1, idPatient);
 
             int rowsAffected = pstmt.executeUpdate();
 
@@ -168,6 +172,7 @@ public class XMartCityService {
         }
     }
 
+    // Le reste des méthodes reste inchangé
     private Response SelectAllOrdonnances(final Request request, final Connection connection)
     throws SQLException, JsonProcessingException {
 final ObjectMapper objectMapper = new ObjectMapper();
@@ -225,7 +230,6 @@ try (Statement stmt = connection.createStatement();
         try {
             ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
         } catch (IOException e) {
-
             return new Response(request.getRequestId(), "Erreur lors de la lecture de l'ordonnance");
         }
 
@@ -269,7 +273,6 @@ try (Statement stmt = connection.createStatement();
 
             return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
-
     }
 
 

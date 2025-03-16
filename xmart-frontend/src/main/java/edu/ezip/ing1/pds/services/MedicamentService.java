@@ -3,7 +3,6 @@ package edu.ezip.ing1.pds.services;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -15,6 +14,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 import edu.ezip.commons.LoggingUtils;
 import edu.ezip.ing1.pds.business.dto.Medicament;
+import edu.ezip.ing1.pds.business.dto.Medicaments;
 import edu.ezip.ing1.pds.business.dto.Ordonnance;
 import edu.ezip.ing1.pds.business.dto.Prescription;
 import edu.ezip.ing1.pds.client.commons.ClientRequest;
@@ -76,31 +76,62 @@ public class MedicamentService {
         }
     }
 
-    public List<Medicament> selectMedicaments() throws InterruptedException, IOException {
-        final Deque<ClientRequest> clientRequests = new ArrayDeque<>();
-        final ObjectMapper objectMapper = new ObjectMapper();
+    
+    public Medicaments selectMedicaments() throws InterruptedException, IOException {
+    final Deque<ClientRequest> clientRequests = new ArrayDeque<>();
+    final ObjectMapper objectMapper = new ObjectMapper();
 
-        final String requestId = UUID.randomUUID().toString();
-        final Request request = new Request();
-        request.setRequestId(requestId);
-        request.setRequestOrder(selectRequestOrder);
+    final String requestId = UUID.randomUUID().toString();
+    final Request request = new Request();
+    request.setRequestId(requestId);
+    request.setRequestOrder(selectRequestOrder);
 
-        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
-        LoggingUtils.logDataMultiLine(logger, Level.TRACE, requestBytes);
+    // Ajout du log pour afficher le JSON envoyé
+    System.out.println("Requête envoyée : " + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(request));
 
-        final SelectAllMedicamentsClientRequest clientRequest = new SelectAllMedicamentsClientRequest(
-                networkConfig, 0, request, null, requestBytes);
-        clientRequests.push(clientRequest);
+    objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+    LoggingUtils.logDataMultiLine(logger, Level.TRACE, requestBytes);
 
-        if (!clientRequests.isEmpty()) {
-            final ClientRequest joinedClientRequest = clientRequests.pop();
-            joinedClientRequest.join();
-            logger.debug("Thread {} terminé.", joinedClientRequest.getThreadName());
-            return (List<Medicament>) joinedClientRequest.getResult();
+    final SelectAllMedicamentsClientRequest clientRequest = new SelectAllMedicamentsClientRequest(
+            networkConfig, 0, request, null, requestBytes);
+    clientRequests.push(clientRequest);
+
+    if (!clientRequests.isEmpty()) {
+        final ClientRequest joinedClientRequest = clientRequests.pop();
+        joinedClientRequest.join();
+        logger.debug("Thread {} terminé.", joinedClientRequest.getThreadName());
+        
+        //  Vérifier ce que getResult() retourne
+        Object result = joinedClientRequest.getResult();
+        System.out.println("Résultat brut récupéré : " + result);
+        
+        if (result instanceof String) {
+            System.out.println("JSON reçu : " + result);
+        }
+
+        // Récupération du résultat sous forme de Medicaments
+        Medicaments medicaments = (Medicaments) joinedClientRequest.getResult();
+        
+        if (medicaments != null && !medicaments.getMedicaments().isEmpty()) {
+            System.out.println("Nombre de médicaments: " + medicaments.getMedicaments().size());
+        for (Medicament med : medicaments.getMedicaments()) {
+        System.out.println("Médicament: " + med.getNomMedicament() + 
+                           ", ID: " + med.getId() + 
+                           ", Principe Actif: [" + med.getPrincipeActif() + "]");
+            
+        }
+        return medicaments; // Retourne l'objet Medicaments
         } else {
             logger.error("Aucun médicament trouvé !");
-            return null;
+            return new Medicaments(); // Retourne un objet Medicaments vide
         }
+    } else {
+        logger.error("Aucun médicament trouvé !");
+        return new Medicaments(); // Retourne un objet Medicaments vide
     }
+}
+
+
+
 }

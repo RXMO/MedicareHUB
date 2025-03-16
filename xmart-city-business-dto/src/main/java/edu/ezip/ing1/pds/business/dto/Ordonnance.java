@@ -14,7 +14,7 @@ public class Ordonnance {
     private int idPatient;
     private int idMedecin;
     private int idConsultation;
-    private String posologie;  
+     
 
     public Ordonnance() {
     }
@@ -26,7 +26,6 @@ public class Ordonnance {
         this.idPatient = idPatient;
         this.idMedecin = idMedecin;
         this.idConsultation = idConsultation;
-        this.posologie = posologie;
     }
 
     public Ordonnance(int idOrdonnance) {
@@ -44,8 +43,8 @@ public class Ordonnance {
     public final PreparedStatement build(PreparedStatement preparedStatement)
             throws SQLException, NoSuchFieldException, IllegalAccessException {
         return buildPreparedStatement(preparedStatement, 
-                String.valueOf(idOrdonnance), description, String.valueOf(idPatient), 
-                String.valueOf(idMedecin), String.valueOf(idConsultation), posologie);
+                String.valueOf(idOrdonnance), description, String.valueOf(idPatient)); 
+                
     }
 
     public int getIdOrdonnance() {
@@ -68,9 +67,6 @@ public class Ordonnance {
         return idConsultation;
     }
 
-    public String getPosologie() {
-        return posologie;
-    }
 
     public void setIdOrdonnance(int idOrdonnance) {
         this.idOrdonnance = idOrdonnance;
@@ -92,10 +88,6 @@ public class Ordonnance {
         this.idConsultation = idConsultation;
     }
     
-
-    public void setPosologie(String posologie) {
-        this.posologie = posologie;
-    }
     public static int generateIdOrdonnance() {
         
         return new Random().nextInt(1000); 
@@ -149,7 +141,6 @@ public class Ordonnance {
                 ", idPatient=" + idPatient +
                 ", idMedecin=" + idMedecin +
                 ", idConsultation=" + idConsultation +
-                ", posologie='" + posologie + '\'' +
                 '}';
     }
 }

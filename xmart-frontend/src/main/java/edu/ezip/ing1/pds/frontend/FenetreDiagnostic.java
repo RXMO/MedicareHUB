@@ -1,4 +1,4 @@
-package edu.ezip.ing1.pds.frontend;
+/*package edu.ezip.ing1.pds.frontend;
 import java.awt.BorderLayout;
 import java.util.List;
 
@@ -129,4 +129,4 @@ private int idPatient = 1;
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new FenetreDiagnostic().setVisible(true));
     }
-}
+}*/

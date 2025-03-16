@@ -5,9 +5,19 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+
 public class Medicament {
+    @JsonProperty("idMedicament")
     private int idMedicament;
+
+    @JsonProperty("nomMedicament")
     private String nomMedicament;
+
+    @JsonProperty("principeActif")
     private String principeActif;
 
     public Medicament() {
@@ -67,16 +77,29 @@ public class Medicament {
     }
 
     private void setFieldsFromResultSet(final ResultSet resultSet, final String... fieldNames)
-            throws NoSuchFieldException, SQLException, IllegalAccessException {
-        for (final String fieldName : fieldNames) {
-            final Field field = this.getClass().getDeclaredField(fieldName);
-            if (field.getType() == int.class) {
-                field.set(this, resultSet.getInt(fieldName));
-            } else {
-                field.set(this, resultSet.getObject(fieldName));
-            }
+        throws NoSuchFieldException, SQLException, IllegalAccessException {
+    for (final String fieldName : fieldNames) {
+        final Field field = this.getClass().getDeclaredField(fieldName);
+        String columnName;
+        
+        // Mappez les noms de champs Java aux noms de colonnes SQL
+        if (fieldName.equals("idMedicament")) {
+            columnName = "id_medicament";
+        } else if (fieldName.equals("nomMedicament")) {
+            columnName = "nom_medicament";
+        } else if (fieldName.equals("principeActif")) {
+            columnName = "principe_actif";
+        } else {
+            columnName = fieldName; // Fallback pour les autres champs
+        }
+        
+        if (field.getType() == int.class) {
+            field.set(this, resultSet.getInt(columnName));
+        } else {
+            field.set(this, resultSet.getObject(columnName));
         }
     }
+}
 
     private final PreparedStatement buildPreparedStatement(PreparedStatement preparedStatement,
             final String... fieldValues)

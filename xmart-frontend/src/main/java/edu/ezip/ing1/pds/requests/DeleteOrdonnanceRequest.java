@@ -12,33 +12,16 @@ import edu.ezip.ing1.pds.commons.Request;
 
 public class DeleteOrdonnanceRequest extends ClientRequest<Ordonnance, String> {
 
-    public DeleteOrdonnanceRequest(NetworkConfig networkConfig, int myBirthDate, Request request, Ordonnance info, byte[] bytes) throws IOException {
-        super(networkConfig, myBirthDate, request, info, bytes);
+    public DeleteOrdonnanceRequest(
+            NetworkConfig networkConfig, int myBirthDate, Request request, Ordonnance ordonnance, byte[] bytes)
+            throws IOException {
+        super(networkConfig, myBirthDate, request, ordonnance, bytes);
     }
 
     @Override
     public String readResult(String body) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
-        final Map<String, String> statusMap = mapper.readValue(body, Map.class);
-        return statusMap.getOrDefault("status", "Statut inconnu");
+        final Map<String, String> responseMap = mapper.readValue(body, Map.class);
+        return responseMap.get("message"); // Assurez-vous que le serveur renvoie un message dans la réponse
     }
-
-    
-    /*public boolean deleteOrdonnanceFromDB(int ordonnanceId) {
-        String sql = "DELETE FROM ordonnance WHERE id = ?";  
-
-        try (Connection conn = ConnectionPoolImpl.get();  
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            
-            stmt.setInt(1, ordonnanceId);
-
-           
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;  
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;  
-    }*/
 }

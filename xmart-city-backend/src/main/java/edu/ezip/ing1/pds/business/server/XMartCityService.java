@@ -6,6 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import edu.ezip.ing1.pds.business.dto.Medicament;
 import edu.ezip.ing1.pds.business.dto.Ordonnance;
 import edu.ezip.ing1.pds.business.dto.Ordonnances;
 import edu.ezip.ing1.pds.business.dto.Patient;
@@ -36,11 +39,12 @@ public class XMartCityService {
                 "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
         DELETE_ORDONNANCE("DELETE FROM ordonnance WHERE id_ordonnance = ?"),
         INSERT_PRESCRIPTION("INSERT INTO Prescription (id_ordonnance, id_medicament, posologie) VALUES (?, ?, ?)"),
+        SELECT_ALL_MEDICAMENTS("SELECT id_medicament, nom_medicament FROM Medicaments"),
         SELECT_PRESCRIPTION_PAR_ORDONNANCE(
                 "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
                         "JOIN Medicaments m ON p.id_medicament = m.id_medicament " +
                         "WHERE p.id_ordonnance = ?");
-
+         
         private final String query;
 
         private Queries(final String query) {
@@ -85,6 +89,10 @@ public class XMartCityService {
             case DELETE_ORDONNANCE:
                 response = DeleteOrdonnance(request, connection);
                 break;
+            case SELECT_ALL_MEDICAMENTS:
+                response = SelectAllMedicaments(request, connection);
+                break;
+            
 
             default:
                 break;
@@ -256,4 +264,30 @@ public class XMartCityService {
             return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
     }
+<<<<<<< HEAD
 }
+=======
+
+    private Response SelectAllMedicaments(final Request request, final Connection connection)
+        throws SQLException, JsonProcessingException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    try (Statement stmt = connection.createStatement();
+            ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
+
+        List<Medicament> medicaments = new ArrayList<>();
+
+        while (res.next()) {
+            Medicament medicament = new Medicament();
+            medicament.setIdMedicament(res.getInt("id_medicament"));
+            medicament.setNomMedicament(res.getString("nom_medicament"));
+            medicaments.add(medicament);
+        }
+
+        return new Response(request.getRequestId(),
+                medicaments.isEmpty() ? "Aucun médicament trouvé"
+                        : objectMapper.writeValueAsString(medicaments));
+    }
+}
+
+}
+>>>>>>> main

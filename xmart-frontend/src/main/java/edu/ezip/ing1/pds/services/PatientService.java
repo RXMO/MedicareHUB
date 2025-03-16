@@ -18,9 +18,14 @@ import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
+import edu.ezip.ing1.pds.requests.DeletePatientClientRequest;
 import edu.ezip.ing1.pds.requests.InsertPatientClientRequest;
+<<<<<<< HEAD
 import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest;
 import edu.ezip.ing1.pds.requests.DeletePatientClientRequest;
+=======
+import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest; // Import de la requête pour la suppression
+>>>>>>> main
 
 public class PatientService {
 

@@ -6,7 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,54 +175,51 @@ public class XMartCityService {
 
     // Le reste des méthodes reste inchangé
     private Response SelectAllOrdonnances(final Request request, final Connection connection)
-    throws SQLException, JsonProcessingException {
-final ObjectMapper objectMapper = new ObjectMapper();
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
 
-// Log pour vérifier la requête SQL
-System.out.println(" Exécution de la requête : " + Queries.SELECT_ALL_ORDONNANCES.query);
+        // Log pour vérifier la requête SQL
+        System.out.println(" Exécution de la requête : " + Queries.SELECT_ALL_ORDONNANCES.query);
 
-try (Statement stmt = connection.createStatement();
-     ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_ORDONNANCES.query)) {
+        try (Statement stmt = connection.createStatement();
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_ORDONNANCES.query)) {
 
-    Ordonnances ordonnances = new Ordonnances();
-    
-    // Log pour vérifier le résultat de la requête
-    System.out.println(" Résultat de la requête reçu, traitement du ResultSet...");
+            Ordonnances ordonnances = new Ordonnances();
 
-    // Vérifie si des ordonnances sont récupérées
-    int ordonnancesCount = 0;
-    while (res.next()) {
-        Ordonnance ordonnance = new Ordonnance();
-        ordonnance.setIdOrdonnance(res.getInt("id_ordonnance"));
-        ordonnance.setDescription(res.getString("description"));
-        ordonnance.setIdPatient(res.getInt("id_patient"));
-        ordonnance.setIdMedecin(res.getInt("id_medecin"));
-        ordonnance.setIdConsultation(res.getInt("id_consultation"));
+            // Log pour vérifier le résultat de la requête
+            System.out.println(" Résultat de la requête reçu, traitement du ResultSet...");
 
-        ordonnances.add(ordonnance);
-        ordonnancesCount++;
+            // Vérifie si des ordonnances sont récupérées
+            int ordonnancesCount = 0;
+            while (res.next()) {
+                Ordonnance ordonnance = new Ordonnance();
+                ordonnance.setIdOrdonnance(res.getInt("id_ordonnance"));
+                ordonnance.setDescription(res.getString("description"));
+                ordonnance.setIdPatient(res.getInt("id_patient"));
+                ordonnance.setIdMedecin(res.getInt("id_medecin"));
+                ordonnance.setIdConsultation(res.getInt("id_consultation"));
+
+                ordonnances.add(ordonnance);
+                ordonnancesCount++;
+            }
+
+            // Log pour vérifier combien d'ordonnances ont été récupérées
+            System.out.println(" Nombre d'ordonnances récupérées : " + ordonnancesCount);
+
+            // Si aucune ordonnance n'est trouvée
+            if (ordonnancesCount == 0) {
+                System.out.println(" Aucune ordonnance trouvée dans le ResultSet.");
+            }
+
+            // Log pour afficher les ordonnances récupérées
+            System.out.println(" Ordonnances récupérées : " + objectMapper.writeValueAsString(ordonnances));
+
+            // Retourne la réponse avec un message en fonction de l'existence d'ordonnances
+            return new Response(request.getRequestId(),
+                    ordonnances.getOrdonnances().isEmpty() ? "Aucune ordonnance trouvée"
+                            : objectMapper.writeValueAsString(ordonnances));
+        }
     }
-
-    // Log pour vérifier combien d'ordonnances ont été récupérées
-    System.out.println(" Nombre d'ordonnances récupérées : " + ordonnancesCount);
-    
-    // Si aucune ordonnance n'est trouvée
-    if (ordonnancesCount == 0) {
-        System.out.println(" Aucune ordonnance trouvée dans le ResultSet.");
-    }
-
-    // Log pour afficher les ordonnances récupérées
-    System.out.println(" Ordonnances récupérées : " + objectMapper.writeValueAsString(ordonnances));
-
-    // Retourne la réponse avec un message en fonction de l'existence d'ordonnances
-    return new Response(request.getRequestId(),
-            ordonnances.getOrdonnances().isEmpty() ? "Aucune ordonnance trouvée"
-                    : objectMapper.writeValueAsString(ordonnances));
-}
-}
-
-
-
 
     private Response DeleteOrdonnance(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
@@ -269,37 +267,32 @@ try (Statement stmt = connection.createStatement();
                     }
                 }
             }
-            
 
             return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
     }
 
-
     private Response SelectAllMedicaments(final Request request, final Connection connection)
-        throws SQLException, JsonProcessingException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    try (Statement stmt = connection.createStatement();
-         ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        try (Statement stmt = connection.createStatement();
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
 
-        Medicaments medicaments = new Medicaments();
-        while (res.next()) {
-            Medicament medicament = new Medicament();
-            medicament.setIdMedicament(res.getInt(1));         // Ajout de l'ID
-            medicament.setNomMedicament(res.getString(2));     // Le nom est maintenant à l'index 2
-            medicament.setPrincipeActif(res.getString(3));     // Ajout du principe actif
-            medicaments.add(medicament);
+            Medicaments medicaments = new Medicaments();
+            while (res.next()) {
+                Medicament medicament = new Medicament();
+                medicament.setIdMedicament(res.getInt(1)); // Ajout de l'ID
+                medicament.setNomMedicament(res.getString(2)); // Le nom est maintenant à l'index 2
+                medicament.setPrincipeActif(res.getString(3)); // Ajout du principe actif
+                medicaments.add(medicament);
+            }
+
+            if (medicaments.getMedicaments().isEmpty()) {
+                return new Response(request.getRequestId(), "Aucun médicament trouvé");
+            }
+
+            return new Response(request.getRequestId(), objectMapper.writeValueAsString(medicaments));
         }
-
-        if (medicaments.getMedicaments().isEmpty()) {
-            return new Response(request.getRequestId(), "Aucun médicament trouvé");
-        }
-
-        return new Response(request.getRequestId(), objectMapper.writeValueAsString(medicaments));
     }
-}
-
 
 }
-
-

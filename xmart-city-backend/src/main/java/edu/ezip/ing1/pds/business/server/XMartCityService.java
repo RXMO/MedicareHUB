@@ -44,7 +44,7 @@ public class XMartCityService {
                 "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
                         "JOIN Medicaments m ON p.id_medicament = m.id_medicament " +
                         "WHERE p.id_ordonnance = ?");
-         
+
         private final String query;
 
         private Queries(final String query) {
@@ -92,7 +92,6 @@ public class XMartCityService {
             case SELECT_ALL_MEDICAMENTS:
                 response = SelectAllMedicaments(request, connection);
                 break;
-            
 
             default:
                 break;
@@ -264,30 +263,26 @@ public class XMartCityService {
             return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
     }
-<<<<<<< HEAD
-}
-=======
 
     private Response SelectAllMedicaments(final Request request, final Connection connection)
-        throws SQLException, JsonProcessingException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    try (Statement stmt = connection.createStatement();
-            ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        try (Statement stmt = connection.createStatement();
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
 
-        List<Medicament> medicaments = new ArrayList<>();
+            List<Medicament> medicaments = new ArrayList<>();
 
-        while (res.next()) {
-            Medicament medicament = new Medicament();
-            medicament.setIdMedicament(res.getInt("id_medicament"));
-            medicament.setNomMedicament(res.getString("nom_medicament"));
-            medicaments.add(medicament);
+            while (res.next()) {
+                Medicament medicament = new Medicament();
+                medicament.setIdMedicament(res.getInt("id_medicament"));
+                medicament.setNomMedicament(res.getString("nom_medicament"));
+                medicaments.add(medicament);
+            }
+
+            return new Response(request.getRequestId(),
+                    medicaments.isEmpty() ? "Aucun médicament trouvé"
+                            : objectMapper.writeValueAsString(medicaments));
         }
-
-        return new Response(request.getRequestId(),
-                medicaments.isEmpty() ? "Aucun médicament trouvé"
-                        : objectMapper.writeValueAsString(medicaments));
     }
-}
 
 }
->>>>>>> main

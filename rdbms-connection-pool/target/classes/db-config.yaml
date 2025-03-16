@@ -3,8 +3,4 @@ host: "172.31.249.24"
 port: 3306
 username: "medicare"
 password: "medicare123"
-<<<<<<< HEAD
 poolSize: 1
-=======
-poolSize: 4
->>>>>>> main

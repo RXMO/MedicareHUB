@@ -147,8 +147,9 @@ public class OrdonnanceFrontEnd extends JFrame {
         ordonnanceTableModel.addColumn("ID Ordonnance");
         ordonnanceTableModel.addColumn("ID Patient");
         ordonnanceTableModel.addColumn("ID Consultation");
-        ordonnanceTableModel.addColumn("Description");
         ordonnanceTableModel.addColumn("ID Médecin");
+        ordonnanceTableModel.addColumn("Description");
+        
 
         ordonnanceTable = new JTable(ordonnanceTableModel);
         ordonnanceTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
@@ -426,8 +427,8 @@ private String checkDuplicatePrincipesActifs(List<String> selectedMedicamentName
                         ordonnance.getIdOrdonnance(),
                         ordonnance.getIdPatient(),
                         ordonnance.getIdConsultation(),
-                        ordonnance.getDescription(),
-                        ordonnance.getIdMedecin()
+                        ordonnance.getIdMedecin(),
+                        ordonnance.getDescription()
                     });
                 }
                 ordonnanceTableModel.fireTableDataChanged();

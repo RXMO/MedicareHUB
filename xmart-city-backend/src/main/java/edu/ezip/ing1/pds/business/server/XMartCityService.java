@@ -6,8 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +33,7 @@ public class XMartCityService {
         INSERT_PATIENT(
                 "INSERT INTO Patients (id_patient,nom_patient, prenom_patient, num_tel, allergies) VALUES (?,?, ?, ?, ?)"),
         DELETE_PATIENT("DELETE FROM Patients WHERE id_patient = ?"),
-        SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance"),
+        SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance ORDER BY id_ordonnance DESC"),
         INSERT_ORDONNANCE(
                 "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
         DELETE_ORDONNANCE("DELETE FROM ordonnance WHERE id_ordonnance = ?"),

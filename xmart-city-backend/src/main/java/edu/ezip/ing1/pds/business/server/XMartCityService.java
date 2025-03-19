@@ -34,8 +34,8 @@ public class XMartCityService {
                 "INSERT INTO Patients (id_patient,nom_patient, prenom_patient, num_tel, allergies) VALUES (?,?, ?, ?, ?)"),
         DELETE_PATIENT("DELETE FROM Patients WHERE id_patient = ?"),
         SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance ORDER BY id_ordonnance DESC"),
-        INSERT_ORDONNANCE(
-                "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
+        INSERT_ORDONNANCE("INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
+        UPDATE_ORDONNANCE("UPDATE ordonnance SET description = ?, id_patient = ?, id_medecin = ?, id_consultation = ? WHERE id_ordonnance = ?"),        
         DELETE_ORDONNANCE("DELETE FROM ordonnance WHERE id_ordonnance = ?"),
         INSERT_PRESCRIPTION("INSERT INTO Prescription (id_ordonnance, id_medicament, posologie) VALUES (?, ?, ?)"),
         SELECT_ALL_MEDICAMENTS("SELECT id_medicament, nom_medicament, principe_actif FROM medicament"),
@@ -91,6 +91,10 @@ public class XMartCityService {
             case SELECT_ALL_MEDICAMENTS:
                 response = SelectAllMedicaments(request, connection);
                 break;
+            // Dans la méthode dispatch, ajoutez ce cas dans le switch :
+            case UPDATE_ORDONNANCE:
+                 response = UpdateOrdonnance(request, connection);
+                 break;
 
             default:
                 break;
@@ -270,6 +274,27 @@ public class XMartCityService {
             return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
     }
+    private Response UpdateOrdonnance(final Request request, final Connection connection)
+        throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    Ordonnance ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
+
+    try (PreparedStatement pstmt = connection.prepareStatement(Queries.UPDATE_ORDONNANCE.query)) {
+        pstmt.setString(1, ordonnance.getDescription());
+        pstmt.setInt(2, ordonnance.getIdPatient());
+        pstmt.setInt(3, ordonnance.getIdMedecin());
+        pstmt.setInt(4, ordonnance.getIdConsultation());
+        pstmt.setInt(5, ordonnance.getIdOrdonnance());
+        
+        int rowsAffected = pstmt.executeUpdate();
+
+        if (rowsAffected > 0) {
+            return new Response(request.getRequestId(), "Ordonnance mise à jour avec succès");
+        } else {
+            return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour mise à jour");
+        }
+    }
+}
 
     private Response SelectAllMedicaments(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
@@ -293,5 +318,6 @@ public class XMartCityService {
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(medicaments));
         }
     }
+
 
 }

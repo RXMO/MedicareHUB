@@ -45,9 +45,9 @@ public class MainFrontEnd {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new FlowLayout());
 
-        JButton btnOmar = new JButton("Omar");
-        JButton btnAfrah = new JButton("Afrah");
-        JButton btnEmna = new JButton("Emna");
+        JButton btnOmar = new JButton("Patients");
+        JButton btnAfrah = new JButton("Diagnostic");
+        JButton btnEmna = new JButton("Odonnances");
         btnEmna.addActionListener(e -> {
     try {
         // Charger la configuration réseau à partir du fichier "network.yaml"

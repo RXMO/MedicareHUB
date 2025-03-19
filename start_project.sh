@@ -9,6 +9,9 @@ tmux new-window -t my_project -n ssh "ssh medicare@172.31.249.24"
 # Ouvrir un troisième onglet pour le backend
 tmux new-window -t my_project -n backend "cd xmart-city-backend/target && java -jar xmart-zity-backend-1.0-SNAPSHOT-jar-with-dependencies.jar"
 
+# Attendre que le backend soit prêt (exemple avec un simple délai de 10 secondes)
+sleep 10
+
 # Ouvrir un quatrième onglet pour le frontend
 tmux new-window -t my_project -n frontend "cd xmart-frontend/target && java -jar xmart-frontend-1.0-SNAPSHOT-jar-with-dependencies.jar xmart-frontend-1.0-SNAPSHOT.jar"
 

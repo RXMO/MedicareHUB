@@ -60,6 +60,8 @@ public class OrdonnanceFrontEnd extends JFrame {
     private DefaultTableModel ordonnanceTableModel;
     private JTable ordonnanceTable;
     private List<Medicament> medicamentsList;
+    private boolean enModeModification = false;
+    private int currentOrdonnanceId = -1;
 
     public OrdonnanceFrontEnd(OrdonnanceService ordonnanceService, MedicamentService medicamentService) throws InterruptedException, IOException {
         if (ordonnanceService == null || medicamentService == null) {
@@ -237,6 +239,9 @@ public class OrdonnanceFrontEnd extends JFrame {
                     descriptionField.setText("");
                     idMedecinField.setText("");
                     searchMedicamentField.setText("");
+
+
+
                     
                     // Décocher toutes les cases
                     for (JCheckBox checkbox : medicamentCheckboxes) {
@@ -306,10 +311,112 @@ public class OrdonnanceFrontEnd extends JFrame {
             }
         });
 
+                 // Ajoutez une variable d'état pour suivre si vous êtes en mode modification
+              
+// Variable pour stocker l'ID de l'ordonnance en cours de modification
+               
+                // Ajoutez un bouton de modification dans le panel des boutons
+                JButton confirmerButton = new JButton("Confirmer Modification");
+                confirmerButton.setVisible(false);
 
+                JButton modifierButton = new JButton("Modifier");
+                
+                modifierButton.addActionListener(e -> {
+                    int selectedRow = ordonnanceTable.getSelectedRow();
+                    if (selectedRow != -1) {
+                        // Récupérer les données de la ligne sélectionnée
+                        int idOrdonnance = (int) ordonnanceTableModel.getValueAt(selectedRow, 0);
+                        int idPatient = (int) ordonnanceTableModel.getValueAt(selectedRow, 1);
+                        int idConsultation = (int) ordonnanceTableModel.getValueAt(selectedRow, 2);
+                        int idMedecin = (int) ordonnanceTableModel.getValueAt(selectedRow, 3);
+                        String description = (String) ordonnanceTableModel.getValueAt(selectedRow, 4);
+                        
+                        // Stocker l'ID de l'ordonnance en cours de modification
+                        currentOrdonnanceId = idOrdonnance;
+                        
+                        // Remplir les champs avec les données actuelles
+                        idPatientField.setText(String.valueOf(idPatient));
+                        idConsultationField.setText(String.valueOf(idConsultation));
+                        idMedecinField.setText(String.valueOf(idMedecin));
+                        descriptionField.setText(description);
+                        
+                        // Activer le mode modification
+                        enModeModification = true;
+                        
+                        // Rendre les champs modifiables
+                        idPatientField.setEditable(true);
+                        idConsultationField.setEditable(true);
+                        idMedecinField.setEditable(true);
+                        descriptionField.setEditable(true);
+                        
+                        // Désactiver le bouton modifier et activer le bouton confirmer
+                        modifierButton.setEnabled(false);
+                        confirmerButton.setVisible(true);
+                        
+                        // Optionnel: désactiver les autres boutons pendant la modification
+                        saveButton.setEnabled(false);
+                        supprimerButton.setEnabled(false);
+                        afficherButton.setEnabled(false);
+                        
+                        // Message informatif
+                        JOptionPane.showMessageDialog(null, "Vous pouvez maintenant modifier les informations de l'ordonnance.");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Veuillez sélectionner une ordonnance à modifier.");
+                    }
+                });
+                
+                // Action pour le bouton confirmer
+                confirmerButton.addActionListener(e -> {
+                    try {
+                        // Créer l'objet Ordonnance avec les données modifiées
+                        Ordonnance ordonnanceToUpdate = new Ordonnance();
+                        ordonnanceToUpdate.setIdOrdonnance(currentOrdonnanceId);
+                        ordonnanceToUpdate.setIdPatient(Integer.parseInt(idPatientField.getText()));
+                        ordonnanceToUpdate.setIdConsultation(Integer.parseInt(idConsultationField.getText()));
+                        ordonnanceToUpdate.setIdMedecin(Integer.parseInt(idMedecinField.getText()));
+                        ordonnanceToUpdate.setDescription(descriptionField.getText());
+                        
+                        // Appeler le service pour mettre à jour l'ordonnance
+                        ordonnanceService.updateOrdonnance(ordonnanceToUpdate);
+                        
+                        // Rafraîchir l'affichage
+                        actualiserOrdonnances();
+                        
+                        // Rétablir l'état normal
+                        currentOrdonnanceId = -1;
+                        enModeModification = false;
+                        
+                        // Vider les champs
+                        idPatientField.setText("");
+                        idConsultationField.setText("");
+                        descriptionField.setText("");
+                        idMedecinField.setText("");
+                        
+                        // Rendre les champs non modifiables
+                        idPatientField.setEditable(false);
+                        idConsultationField.setEditable(false);
+                        idMedecinField.setEditable(false);
+                        descriptionField.setEditable(false);
+                        
+                        // Restaurer l'état des boutons
+                        modifierButton.setEnabled(true);
+                        confirmerButton.setVisible(false);
+                        saveButton.setEnabled(true);
+                        supprimerButton.setEnabled(true);
+                        afficherButton.setEnabled(true);
+                        
+                        JOptionPane.showMessageDialog(null, "Ordonnance modifiée avec succès");
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(null, "Veuillez entrer des valeurs valides pour les ID.");
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(null, "Erreur lors de la modification de l'ordonnance: " + ex.getMessage());
+                    }
+                });
         buttonPanel.add(saveButton);
         buttonPanel.add(afficherButton);
         buttonPanel.add(supprimerButton);
+        buttonPanel.add(modifierButton);
+        buttonPanel.add(confirmerButton);
         this.add(buttonPanel, BorderLayout.SOUTH);
 
         // Chargement initial des données

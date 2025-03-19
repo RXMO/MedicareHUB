@@ -22,6 +22,7 @@ import edu.ezip.ing1.pds.commons.Request;
 import edu.ezip.ing1.pds.requests.DeleteOrdonnanceRequest;
 import edu.ezip.ing1.pds.requests.InsertOrdonnanceClientRequest;
 import edu.ezip.ing1.pds.requests.SelectAllOrdonnancesClientRequest;
+import edu.ezip.ing1.pds.requests.UpdateOrdonnanceClientRequest;
 
 public class OrdonnanceService {
 
@@ -31,6 +32,7 @@ public class OrdonnanceService {
     final String insertRequestOrder = "INSERT_ORDONNANCE";
     final String selectRequestOrder = "SELECT_ALL_ORDONNANCES";
     final String deleteRequestOrder = "DELETE_ORDONNANCE";
+    final String updateRequestOrder = "UPDATE_ORDONNANCE";
 
     private final NetworkConfig networkConfig;
     private int lastInsertedOrdonnanceId = -1;  
@@ -49,68 +51,81 @@ public class OrdonnanceService {
         processOrdonnance(ordonnance, deleteRequestOrder, null);
     }
 
-    private void processOrdonnance(Ordonnance ordonnance, String requestOrder, List<String> medicamentsSelectionnes) throws InterruptedException, IOException {
-        final Deque<ClientRequest> clientRequests = new ArrayDeque<>();
-        final ObjectMapper objectMapper = new ObjectMapper();
+    public void updateOrdonnance(Ordonnance ordonnance) throws InterruptedException, IOException {
+        processOrdonnance(ordonnance, updateRequestOrder, null);
+    }
+
+   
+private void processOrdonnance(Ordonnance ordonnance, String requestOrder, List<String> medicamentsSelectionnes) throws InterruptedException, IOException {
+    final Deque<ClientRequest<Ordonnance, String>> clientRequests = new ArrayDeque<>();
+    final ObjectMapper objectMapper = new ObjectMapper();
+    
+    // Pour DELETE_ORDONNANCE, on n'a besoin que de l'ID
+    if (!requestOrder.equals(deleteRequestOrder)) {
+        // Ce code ne s'exécute que pour INSERT, UPDATE ou autre (pas pour DELETE)
+        final StringBuilder descriptionBuilder = new StringBuilder(ordonnance.getDescription() != null ? ordonnance.getDescription() : "");
+
+        if (medicamentsSelectionnes != null && !medicamentsSelectionnes.isEmpty()) {
+            descriptionBuilder.append(" - Médicaments: ");
+            for (String medicament : medicamentsSelectionnes) {
+                descriptionBuilder.append(medicament).append(", ");
+            }
+            descriptionBuilder.setLength(descriptionBuilder.length() - 2);  
+        }
+
+        ordonnance.setDescription(descriptionBuilder.toString());
+    }
+
+    final String jsonifiedOrdonnance = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(ordonnance);
+    logger.trace("Ordonnance JSON : {}", jsonifiedOrdonnance);
+
+    final String requestId = UUID.randomUUID().toString();
+    final Request request = new Request();
+    request.setRequestId(requestId);
+    request.setRequestOrder(requestOrder);
+    request.setRequestContent(jsonifiedOrdonnance);
+    objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+
+    // Utiliser la classe appropriée selon le type de requête
+    ClientRequest<Ordonnance, String> clientRequest;
+    if (requestOrder.equals(deleteRequestOrder)) {
+        clientRequest = new DeleteOrdonnanceRequest(networkConfig, 0, request, ordonnance, requestBytes);
+    } else if (requestOrder.equals(updateRequestOrder)) {
+        clientRequest = new UpdateOrdonnanceClientRequest(networkConfig, 0, request, ordonnance, requestBytes);
+    } else {
+        clientRequest = new InsertOrdonnanceClientRequest(networkConfig, 0, request, ordonnance, requestBytes);
+    }
+    clientRequests.push(clientRequest);
+
+    while (!clientRequests.isEmpty()) {
+        final ClientRequest<Ordonnance, String> processedRequest = clientRequests.pop();
+        processedRequest.join();
         
-        // Pour DELETE_ORDONNANCE, on n'a besoin que de l'ID
-        if (!requestOrder.equals(deleteRequestOrder)) {
-            // Ce code ne s'exécute que pour INSERT ou autre (pas pour DELETE)
-            final StringBuilder descriptionBuilder = new StringBuilder(ordonnance.getDescription() != null ? ordonnance.getDescription() : "");
-
-            if (medicamentsSelectionnes != null && !medicamentsSelectionnes.isEmpty()) {
-                descriptionBuilder.append(" - Médicaments: ");
-                for (String medicament : medicamentsSelectionnes) {
-                    descriptionBuilder.append(medicament).append(", ");
-                }
-                descriptionBuilder.setLength(descriptionBuilder.length() - 2);  
-            }
-
-            ordonnance.setDescription(descriptionBuilder.toString());
-        }
-
-        final String jsonifiedOrdonnance = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(ordonnance);
-        logger.trace("Ordonnance JSON : {}", jsonifiedOrdonnance);
-
-        final String requestId = UUID.randomUUID().toString();
-        final Request request = new Request();
-        request.setRequestId(requestId);
-        request.setRequestOrder(requestOrder);
-        request.setRequestContent(jsonifiedOrdonnance);
-        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
-
-        // Utiliser la classe appropriée selon le type de requête
-        ClientRequest clientRequest;
-        if (requestOrder.equals(deleteRequestOrder)) {
-            clientRequest = new DeleteOrdonnanceRequest(networkConfig, 0, request, ordonnance, requestBytes);
-        } else {
-            clientRequest = new InsertOrdonnanceClientRequest(networkConfig, 0, request, ordonnance, requestBytes);
-        }
-        clientRequests.push(clientRequest);
-
-        while (!clientRequests.isEmpty()) {
-            final ClientRequest processedRequest = clientRequests.pop();
-            processedRequest.join();
-            
-            // Le traitement dépend du type de requête
-            if (requestOrder.equals(insertRequestOrder)) {
-                final Ordonnance processedOrdonnance = (Ordonnance) processedRequest.getInfo();
-                logger.debug("Thread {} terminé : {} --> {}",
-                        processedRequest.getThreadName(),
-                        processedOrdonnance.getDescription(),
-                        processedRequest.getResult());
-                        
-                lastInsertedOrdonnanceId = processedOrdonnance.getIdOrdonnance();
-            } else if (requestOrder.equals(deleteRequestOrder)) {
-                // Pour DELETE, on ne s'intéresse qu'au résultat
-                logger.debug("Thread {} terminé : Suppression ordonnance ID {} --> {}",
-                        processedRequest.getThreadName(),
-                        ordonnance.getIdOrdonnance(),
-                        processedRequest.getResult());
-            }
+        // Le traitement dépend du type de requête
+        if (requestOrder.equals(insertRequestOrder)) {
+            final Ordonnance processedOrdonnance = processedRequest.getInfo();
+            logger.debug("Thread {} terminé : {} --> {}",
+                    processedRequest.getThreadName(),
+                    processedOrdonnance.getDescription(),
+                    processedRequest.getResult());
+                    
+            lastInsertedOrdonnanceId = processedOrdonnance.getIdOrdonnance();
+        } else if (requestOrder.equals(deleteRequestOrder)) {
+            // Pour DELETE, on ne s'intéresse qu'au résultat
+            logger.debug("Thread {} terminé : Suppression ordonnance ID {} --> {}",
+                    processedRequest.getThreadName(),
+                    ordonnance.getIdOrdonnance(),
+                    processedRequest.getResult());
+        } else if (requestOrder.equals(updateRequestOrder)) {
+            // Pour UPDATE, on ne s'intéresse qu'au résultat
+            logger.debug("Thread {} terminé : Mise à jour ordonnance ID {} --> {}",
+                    processedRequest.getThreadName(),
+                    ordonnance.getIdOrdonnance(),
+                    processedRequest.getResult());
         }
     }
+}
     
     public Ordonnances selectOrdonnances() throws InterruptedException, IOException {
         final Deque<ClientRequest> clientRequests = new ArrayDeque<>();

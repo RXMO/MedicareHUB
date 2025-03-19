@@ -154,7 +154,7 @@ public class OrdonnanceFrontEnd extends JFrame {
         ordonnanceTable = new JTable(ordonnanceTableModel);
         ordonnanceTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         
-        // Création du panel central avec la zone de texte et la table (ordre inversé)
+        // Création du panel central avec la zone de texte et la table 
         JPanel centerPanel = new JPanel(new BorderLayout(0, 10));
         centerPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(0, 10, 10, 10));
         

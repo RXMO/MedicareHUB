@@ -21,6 +21,7 @@ import edu.ezip.ing1.pds.commons.Request;
 import edu.ezip.ing1.pds.requests.DeletePatientClientRequest;
 import edu.ezip.ing1.pds.requests.InsertPatientClientRequest;
 import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest; // Import de la requête pour la suppression
+import edu.ezip.ing1.pds.requests.UpdatePatientClientRequest;
 
 public class PatientService {
 
@@ -30,11 +31,15 @@ public class PatientService {
     final String insertRequestOrder = "INSERT_PATIENT";
     final String selectRequestOrder = "SELECT_ALL_PATIENTS";
     final String deleteRequestOrder = "DELETE_PATIENT";
-
+    final String updateRequestOrder = "UPDATE_PATIENT";
     private final NetworkConfig networkConfig;
 
     public PatientService(NetworkConfig networkConfig) {
         this.networkConfig = networkConfig;
+    }
+
+    public void UpdatePatient(Patient patient) throws InterruptedException, IOException {
+        processPatient(patient, updateRequestOrder);
     }
 
     public void InsertPatient(Patient patient) throws InterruptedException, IOException {
@@ -67,6 +72,8 @@ public class PatientService {
             patientRequest = new InsertPatientClientRequest(networkConfig, 0, request, patient, requestBytes);
         } else if (requestOrder.equals(deleteRequestOrder)) {
             patientRequest = new DeletePatientClientRequest(networkConfig, 0, request, patient, requestBytes);
+        } else if (requestOrder.equals(updateRequestOrder)) {
+            patientRequest = new UpdatePatientClientRequest(networkConfig, 0, request, patient, requestBytes);
         }
 
         patientRequests.push(patientRequest);

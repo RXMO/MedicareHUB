@@ -11,21 +11,30 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import edu.ezip.ing1.pds.services.PatientService;
 
 public class PatientUI {
     private final static Logger logger = LoggerFactory.getLogger("PatientUI");
-
-    private PatientService patientService; // Service pour gérer les patients
+    private PatientService patientService;
 
     public PatientUI(Patients patients, PatientService patientService) {
-        this.patientService = patientService; // Injection du service
+        this.patientService = patientService;
         SwingUtilities.invokeLater(() -> createAndShowGUI(patients));
     }
 
+    // Méthode pour vider le formulaire
+    private void clearForm(JTextField idField, JTextField nomField, JTextField prenomField, JTextField telField,
+            JTextField allergiesField) {
+        idField.setText("");
+        nomField.setText("");
+        prenomField.setText("");
+        telField.setText("");
+        allergiesField.setText("");
+    }
+
     private void createAndShowGUI(Patients patients) {
-        // Créer le modèle de la table
         DefaultTableModel tableModel = new DefaultTableModel();
         tableModel.addColumn("ID");
         tableModel.addColumn("Nom");
@@ -33,8 +42,7 @@ public class PatientUI {
         tableModel.addColumn("Téléphone");
         tableModel.addColumn("Allergies");
 
-        // Ajouter les patients existants au modèle de table
-        if (patients != null && patients.getPatients() != null && !patients.getPatients().isEmpty()) {
+        if (patients != null && patients.getPatients() != null) {
             for (Patient patient : patients.getPatients()) {
                 tableModel.addRow(new Object[] {
                         patient.getIdPatient(),
@@ -44,26 +52,21 @@ public class PatientUI {
                         patient.getAllergies()
                 });
             }
-        } else {
-            logger.debug("Aucun patient trouvé.");
         }
 
-        // Créer une JTable pour afficher les patients
         JTable table = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(table);
-        table.setFillsViewportHeight(true);
 
-        // Créer les champs de saisie pour le formulaire
         JTextField idField = new JTextField(10);
         JTextField nomField = new JTextField(10);
         JTextField prenomField = new JTextField(10);
         JTextField telField = new JTextField(10);
         JTextField allergiesField = new JTextField(15);
         JButton ajouterButton = new JButton("Ajouter");
-        JButton afficherButton = new JButton("Afficher la liste");
+        JButton mettreAJourButton = new JButton("Mettre à jour");
         JButton supprimerButton = new JButton("Supprimer");
+        JButton afficherButton = new JButton("Actualiser");
 
-        // Panel pour le formulaire d'ajout
         JPanel formPanel = new JPanel(new GridLayout(5, 2, 5, 5));
         formPanel.add(new JLabel("Id:"));
         formPanel.add(idField);
@@ -78,114 +81,97 @@ public class PatientUI {
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(ajouterButton);
-        buttonPanel.add(afficherButton);
+        buttonPanel.add(mettreAJourButton);
         buttonPanel.add(supprimerButton);
+        buttonPanel.add(afficherButton);
 
         JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.add(formPanel, BorderLayout.CENTER);
         northPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Action du bouton Ajouter
-        ajouterButton.addActionListener(new ActionListener() {
+        // Ajouter un écouteur de sélection à la table
+        table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
-                String idText = idField.getText().trim();
-                String nom = nomField.getText().trim();
-                String prenom = prenomField.getText().trim();
-                String tel = telField.getText().trim();
-                String allergies = allergiesField.getText().trim();
-                int id = Integer.parseInt(idText);
-                // Vérification que les champs obligatoires sont remplis
-                if (!nom.isEmpty() && !prenom.isEmpty()) {
-                    try {
-                        // Créer un objet Patient
-                        Patient patient = new Patient(id, nom, prenom, tel, allergies);
-
-                        // Insérer le patient dans la base de données via le service
-                        patientService.InsertPatient(patient);
-
-                        // Actualiser la liste pour obtenir l'ID généré
-                        try {
-                            Patients refreshedPatients = patientService.selectPatients();
-                            refreshTable(tableModel, refreshedPatients);
-                        } catch (Exception ex) {
-                            // Si l'actualisation échoue, ajouter le patient sans ID à la table
-                            tableModel.addRow(new Object[] { null, nom, prenom, tel, allergies });
-                        }
-
-                        // Réinitialiser les champs de texte
-                        idField.setText("");
-                        nomField.setText("");
-                        prenomField.setText("");
-                        telField.setText("");
-                        allergiesField.setText("");
-                    } catch (IOException | InterruptedException ex) {
-                        // Capturer les exceptions IOException et InterruptedException
-                        JOptionPane.showMessageDialog(null, "Une erreur est survenue lors de l'insertion du patient.",
-                                "Erreur", JOptionPane.ERROR_MESSAGE);
-                        logger.error("Erreur lors de l'insertion du patient", ex);
+            public void valueChanged(ListSelectionEvent e) {
+                if (!e.getValueIsAdjusting()) { // Pour éviter les événements multiples
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow != -1) {
+                        // Remplir les champs de saisie avec les données de la ligne sélectionnée
+                        idField.setText(tableModel.getValueAt(selectedRow, 0).toString());
+                        nomField.setText(tableModel.getValueAt(selectedRow, 1).toString());
+                        prenomField.setText(tableModel.getValueAt(selectedRow, 2).toString());
+                        telField.setText(tableModel.getValueAt(selectedRow, 3).toString());
+                        allergiesField.setText(tableModel.getValueAt(selectedRow, 4).toString());
                     }
-                } else {
-                    // Afficher une erreur si un champ est vide
-                    JOptionPane.showMessageDialog(null, "Veuillez remplir au moins le nom et le prénom.", "Erreur",
+                }
+            }
+        });
+
+        ajouterButton.addActionListener(e -> {
+            try {
+                int id = Integer.parseInt(idField.getText().trim());
+                Patient patient = new Patient(id, nomField.getText().trim(), prenomField.getText().trim(),
+                        telField.getText().trim(), allergiesField.getText().trim());
+                patientService.InsertPatient(patient);
+                refreshTable(tableModel, patientService.selectPatients());
+                clearForm(idField, nomField, prenomField, telField, allergiesField); // Vider le formulaire après
+                                                                                     // l'ajout
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Erreur lors de l'ajout.", "Erreur", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        mettreAJourButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow != -1) {
+                try {
+                    int id = Integer.parseInt(idField.getText().trim());
+                    Patient patient = new Patient(id, nomField.getText().trim(), prenomField.getText().trim(),
+                            telField.getText().trim(), allergiesField.getText().trim());
+                    patientService.UpdatePatient(patient);
+                    refreshTable(tableModel, patientService.selectPatients());
+                    clearForm(idField, nomField, prenomField, telField, allergiesField); // Vider le formulaire après la
+                                                                                         // mise à jour
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "Erreur lors de la mise à jour.", "Erreur",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Veuillez sélectionner un patient à mettre à jour.", "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        supprimerButton.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow != -1) {
+                try {
+                    int id = (int) tableModel.getValueAt(selectedRow, 0);
+                    patientService.DeletePatient(new Patient(id, "", "", "", ""));
+                    refreshTable(tableModel, patientService.selectPatients());
+                    clearForm(idField, nomField, prenomField, telField, allergiesField); // Vider le formulaire après la
+                                                                                         // suppression
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "Erreur lors de la suppression.", "Erreur",
                             JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
 
-        // Action du bouton Afficher
         afficherButton.addActionListener(e -> {
             try {
-                Patients refreshedPatients = patientService.selectPatients();
-                refreshTable(tableModel, refreshedPatients);
+                refreshTable(tableModel, patientService.selectPatients());
+                clearForm(idField, nomField, prenomField, telField, allergiesField); // Vider le formulaire après
+                                                                                     // l'actualisation
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, "Erreur lors de l'actualisation de la liste des patients.",
-                        "Erreur", JOptionPane.ERROR_MESSAGE);
-                logger.error("Erreur lors de l'actualisation", ex);
+                JOptionPane.showMessageDialog(null, "Erreur lors de l'affichage.", "Erreur", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        // Action du bouton Supprimer
-        supprimerButton.addActionListener(e -> {
-            int selectedRow = table.getSelectedRow();
-            if (selectedRow != -1) {
-                // Récupérer l'ID du patient sélectionné
-                Integer id = (Integer) tableModel.getValueAt(selectedRow, 0);
-
-                if (id == null) {
-                    JOptionPane.showMessageDialog(null, "Impossible de supprimer un patient sans ID.",
-                            "Erreur", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                // Créer un objet Patient à supprimer avec seulement l'ID
-                Patient patientToDelete = new Patient();
-                patientToDelete.setIdPatient(id);
-
-                try {
-                    // Appeler le service pour supprimer le patient
-                    patientService.DeletePatient(patientToDelete);
-
-                    // Supprimer la ligne de la table
-                    tableModel.removeRow(selectedRow);
-                } catch (IOException | InterruptedException ex) {
-                    // Capturer les exceptions IOException et InterruptedException
-                    JOptionPane.showMessageDialog(null, "Une erreur est survenue lors de la suppression du patient.",
-                            "Erreur", JOptionPane.ERROR_MESSAGE);
-                    logger.error("Erreur lors de la suppression du patient", ex);
-                }
-            } else {
-                // Afficher une erreur si aucune ligne n'est sélectionnée
-                JOptionPane.showMessageDialog(null, "Veuillez sélectionner un patient à supprimer.", "Erreur",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        // Créer une fenêtre JFrame pour afficher la table et le formulaire
         JFrame frame = new JFrame("Gestion des Patients");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 500);
-        frame.setLocationRelativeTo(null); // Centrer la fenêtre
+        frame.setLocationRelativeTo(null);
         frame.setLayout(new BorderLayout());
         frame.add(northPanel, BorderLayout.NORTH);
         frame.add(scrollPane, BorderLayout.CENTER);
@@ -193,10 +179,7 @@ public class PatientUI {
     }
 
     private void refreshTable(DefaultTableModel model, Patients patients) {
-        // Effacer toutes les lignes du modèle
         model.setRowCount(0);
-
-        // Ajouter les patients actualisés
         if (patients != null && patients.getPatients() != null) {
             for (Patient patient : patients.getPatients()) {
                 model.addRow(new Object[] {
@@ -208,5 +191,5 @@ public class PatientUI {
                 });
             }
         }
-    }
+    };
 }

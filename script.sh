@@ -11,7 +11,11 @@ SCP_HOST="172.31.252.216"
 SOURCE_FILE="xmart-city-backend/target/xmart-zity-backend-1.0-SNAPSHOT-jar-with-dependencies.jar"
 DEST_PATH="/home/medicareback"
 SCP_PASSWORD="medicareback"  # Le mot de passe pour medicareback
-
+echo "--------------------DATABASE--------------------"
+# Connexion SSH à la machine distante pour se connecter à la base de données
+sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no "$SSH_USER"@"$SSH_HOST" << EOF
+    echo "--------------------Connexion SSH établie sur la machine distante de DATABASE--------------------"
+EOF
 echo "--------------------Compilation de code--------------------"
 # Compiler le projet Maven
 mvn clean install

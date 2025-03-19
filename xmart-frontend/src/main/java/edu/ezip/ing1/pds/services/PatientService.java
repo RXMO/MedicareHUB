@@ -18,9 +18,10 @@ import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
+import edu.ezip.ing1.pds.requests.DeletePatientClientRequest;
 import edu.ezip.ing1.pds.requests.InsertPatientClientRequest;
-import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest;
-import edu.ezip.ing1.pds.requests.DeletePatientClientRequest; // Import de la requête pour la suppression
+import edu.ezip.ing1.pds.requests.SelectAllPatientsClientRequest; // Import de la requête pour la suppression
+import edu.ezip.ing1.pds.requests.UpdatePatientClientRequest;
 
 public class PatientService {
 
@@ -29,20 +30,23 @@ public class PatientService {
 
     final String insertRequestOrder = "INSERT_PATIENT";
     final String selectRequestOrder = "SELECT_ALL_PATIENTS";
-    final String deleteRequestOrder = "DELETE_PATIENT"; // Ajout de l'ordre de requête pour la suppression
-
+    final String deleteRequestOrder = "DELETE_PATIENT";
+    final String updateRequestOrder = "UPDATE_PATIENT";
     private final NetworkConfig networkConfig;
 
     public PatientService(NetworkConfig networkConfig) {
         this.networkConfig = networkConfig;
     }
 
+    public void UpdatePatient(Patient patient) throws InterruptedException, IOException {
+        processPatient(patient, updateRequestOrder);
+    }
+
     public void InsertPatient(Patient patient) throws InterruptedException, IOException {
         processPatient(patient, insertRequestOrder);
     }
 
-    public void DeletePatient(Patient patient) throws InterruptedException, IOException { // Nouvelle méthode pour
-                                                                                          // supprimer un patient
+    public void DeletePatient(Patient patient) throws InterruptedException, IOException {
         processPatient(patient, deleteRequestOrder);
     }
 
@@ -67,9 +71,9 @@ public class PatientService {
         if (requestOrder.equals(insertRequestOrder)) {
             patientRequest = new InsertPatientClientRequest(networkConfig, 0, request, patient, requestBytes);
         } else if (requestOrder.equals(deleteRequestOrder)) {
-            patientRequest = new DeletePatientClientRequest(networkConfig, 0, request, patient, requestBytes); // Requête
-                                                                                                               // pour
-                                                                                                               // supprimer
+            patientRequest = new DeletePatientClientRequest(networkConfig, 0, request, patient, requestBytes);
+        } else if (requestOrder.equals(updateRequestOrder)) {
+            patientRequest = new UpdatePatientClientRequest(networkConfig, 0, request, patient, requestBytes);
         }
 
         patientRequests.push(patientRequest);
@@ -78,10 +82,18 @@ public class PatientService {
             final ClientRequest processedRequest = patientRequests.pop();
             processedRequest.join();
             final Patient processedPatient = (Patient) processedRequest.getInfo();
-            logger.debug("Thread {} complete : {} {} --> {}",
-                    processedRequest.getThreadName(),
-                    processedPatient.getNom(), processedPatient.getPrenom(), processedPatient.getAge(),
-                    processedRequest.getResult());
+
+            // Log adapté à la nouvelle structure
+            if (processedPatient != null) {
+                logger.debug("Thread {} complete : {} {} --> {}",
+                        processedRequest.getThreadName(),
+                        processedPatient.getNomPatient(),
+                        processedPatient.getPrenomPatient(),
+                        processedPatient.getIdPatient(),
+                        processedRequest.getResult());
+            } else {
+                logger.debug("Thread {} complete with null patient.", processedRequest.getThreadName());
+            }
         }
     }
 

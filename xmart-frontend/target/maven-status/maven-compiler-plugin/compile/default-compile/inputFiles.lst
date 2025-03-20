@@ -1,6 +1,7 @@
 /home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/requests/SelectAllMedicamentsClientRequest.java
 /home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/requests/UpdatePatientClientRequest.java
 /home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/services/MedicamentService.java
+/home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/requests/UpdateOrdonnanceClientRequest.java
 /home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/services/OrdonnanceService.java
 /home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/MainFrontEnd.java
 /home/omar/Bureau/Sirus/MedicareHUB/xmart-frontend/src/main/java/edu/ezip/ing1/pds/services/StudentService.java

@@ -63,6 +63,6 @@ sleep 5
 
 # Lancer le front-end
 echo "--------------------Lancement du Front-end--------------------"
-gnome-terminal -- bash -c "cd xmart-frontend/target && java -jar xmart-frontend-1.0-SNAPSHOT-jar-with-dependencies.jar; exec bash"
+xterm -e "cd xmart-frontend/target && java -jar xmart-frontend-1.0-SNAPSHOT-jar-with-dependencies.jar"
 
 echo "✅ Front-End démarré."

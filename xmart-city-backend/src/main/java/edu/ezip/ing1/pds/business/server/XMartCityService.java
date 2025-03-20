@@ -32,6 +32,8 @@ public class XMartCityService {
         SELECT_ALL_PATIENTS("SELECT id_patient, nom_patient, prenom_patient, num_tel, allergies FROM Patients "),
         INSERT_PATIENT(
                 "INSERT INTO Patients (id_patient,nom_patient, prenom_patient, num_tel, allergies) VALUES (?,?, ?, ?, ?)"),
+        UPDATE_PATIENT(
+                "UPDATE Patients SET nom_patient = ?, prenom_patient = ?, num_tel = ?, allergies = ? WHERE id_patient = ?"),
         DELETE_PATIENT("DELETE FROM Patients WHERE id_patient = ?"),
         SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance ORDER BY id_ordonnance DESC"),
         INSERT_ORDONNANCE("INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
@@ -75,7 +77,9 @@ public class XMartCityService {
             case INSERT_PATIENT:
                 response = InsertPatient(request, connection);
                 break;
-
+            case UPDATE_PATIENT:
+                response = UpdatePatient(request, connection);
+                break;
             case DELETE_PATIENT:
                 response = DeletePatient(request, connection);
                 break;
@@ -100,6 +104,34 @@ public class XMartCityService {
                 break;
         }
         return response;
+    }
+
+    private Response UpdatePatient(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Patient requestData = objectMapper.readValue(request.getRequestBody(), Patient.class);
+
+        String nomPatient = requestData.getNomPatient();
+        String prenomPatient = requestData.getPrenomPatient();
+        String numTel = requestData.getNumTel();
+        String allergies = requestData.getAllergies();
+        int idPatient = requestData.getIdPatient();
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.UPDATE_PATIENT.query)) {
+            pstmt.setString(1, nomPatient);
+            pstmt.setString(2, prenomPatient);
+            pstmt.setString(3, numTel);
+            pstmt.setString(4, allergies);
+            pstmt.setInt(5, idPatient);
+
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                return new Response(request.getRequestId(), "{\"message\": \"Patient mis à jour avec succès\"}");
+            } else {
+                return new Response(request.getRequestId(), "{\"message\": \"Aucun patient trouvé pour mise à jour\"}");
+            }
+        }
     }
 
     private Response InsertPatient(final Request request, final Connection connection)

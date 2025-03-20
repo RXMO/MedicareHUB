@@ -1,5 +1,6 @@
 package edu.ezip.ing1.pds;
 
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.io.IOException;
 
@@ -23,8 +24,6 @@ public class MainFrontEnd {
     private final static String LoggingLabel = "FrontEnd";
     private final static Logger logger = LoggerFactory.getLogger(LoggingLabel);
     private final static String networkConfigFile = "network.yaml";
-    
-
 
     public static void main(String[] args) throws IOException, InterruptedException {
         // Charger la configuration du réseau
@@ -45,40 +44,43 @@ public class MainFrontEnd {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new FlowLayout());
 
+        // Centrer la fenêtre
+        frame.setLocationRelativeTo(null);
+
+        // Colorer la barre supérieure en vert menthe
+        frame.getRootPane().setBackground(new Color(127, 255, 212)); // Vert menthe clair
+
         JButton btnOmar = new JButton("Patients");
         JButton btnAfrah = new JButton("Diagnostic");
         JButton btnEmna = new JButton("Odonnances");
+
         btnEmna.addActionListener(e -> {
-    try {
-        // Charger la configuration réseau à partir du fichier "network.yaml"
-        NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, "network.yaml");
+            try {
+                // Charger la configuration réseau à partir du fichier "network.yaml"
+                NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, "network.yaml");
 
-        // Initialiser les services avec la configuration réseau
-        OrdonnanceService ordonnanceService = new OrdonnanceService(networkConfig);
-        MedicamentService medicamentService = new MedicamentService(networkConfig);
+                // Initialiser les services avec la configuration réseau
+                OrdonnanceService ordonnanceService = new OrdonnanceService(networkConfig);
+                MedicamentService medicamentService = new MedicamentService(networkConfig);
 
-        // Créer et afficher l'interface Ordonnance avec les services passés en paramètres
-        new OrdonnanceFrontEnd(ordonnanceService, medicamentService);
-    } catch (InterruptedException | IOException ex) {
-        // Afficher un message d'erreur si une exception se produit
-        JOptionPane.showMessageDialog(null, "Erreur lors de l'ouverture de l'interface ordonnance : " + ex.getMessage());
-        ex.printStackTrace();
-    }
-});
-
-
+                // Créer et afficher l'interface Ordonnance avec les services passés en paramètres
+                new OrdonnanceFrontEnd(ordonnanceService, medicamentService);
+            } catch (InterruptedException | IOException ex) {
+                // Afficher un message d'erreur si une exception se produit
+                JOptionPane.showMessageDialog(null, "Erreur lors de l'ouverture de l'interface ordonnance : " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
 
         // ActionListener pour le bouton Omar
         btnOmar.addActionListener(e -> new PatientUI(patients, patientService));
 
         // ActionListener pour le bouton Afrah (ouvre l'interface FenetreDiagnostic)
         btnAfrah.addActionListener(e -> {
-           // FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
+            // FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
             //fenetreDiagnostic.setVisible(true);  // Affiche la fenêtre directement ici
             //fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
         });
-
-        // ActionListener pour le bouton Emna (ouvre l'interface OrdonnanceFrontEnd)
 
         // Ajouter les boutons à l'interface
         frame.add(btnOmar);
@@ -88,4 +90,3 @@ public class MainFrontEnd {
         frame.setVisible(true);
     }
 }
-

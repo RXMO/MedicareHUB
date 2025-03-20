@@ -5,9 +5,9 @@ import java.util.List;
 public class Maladie {
     private int id;
     private String nom;
-    private List<Symptome> symptomes;
+    private List<Symptomes> symptomes;
 
-    public Maladie(int id, String nom, List<Symptome> symptomes) {
+    public Maladie(int id, String nom, List<Symptomes> symptomes) {
         this.id = id;
         this.nom = nom;
         this.symptomes = symptomes;
@@ -18,7 +18,7 @@ public class Maladie {
         this.id = id; 
     }
     public String getNom() { return nom; }
-    public List<Symptome> getSymptomes() { return symptomes; }
+    public List<Symptomes> getSymptomes() { return symptomes; }
 
     @Override
     public String toString() {

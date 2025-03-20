@@ -6,6 +6,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,7 @@ import edu.ezip.ing1.pds.business.dto.Ordonnances;
 import edu.ezip.ing1.pds.business.dto.Patient;
 import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.business.dto.Prescription;
+import edu.ezip.ing1.pds.business.dto.Symptomes;
 import edu.ezip.ing1.pds.commons.Request;
 import edu.ezip.ing1.pds.commons.Response;
 
@@ -42,7 +45,25 @@ public class XMartCityService {
         SELECT_PRESCRIPTION_PAR_ORDONNANCE(
                 "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
                         "JOIN medicament m ON p.id_medicament = m.id_medicament " +
-                        "WHERE p.id_ordonnance = ?");
+                        "WHERE p.id_ordonnance = ?"),
+                        SELECT_ALL_SYMPTOMES("SELECT id_symptome, description FROM symptomes"),
+INSERT_SYMPTOME("INSERT INTO symptomes (description) VALUES (?)"),
+DELETE_SYMPTOME("DELETE FROM symptomes WHERE description = ?"),
+UPDATE_SYMPTOME("UPDATE symptomes SET description = ? WHERE description = ?"),
+RECHERCHER_MALADIES_PAR_SYMPTOME(
+        "SELECT DISTINCT maladies.nom FROM maladies " +
+                "JOIN symptomes_maladies ON maladies.id = symptomes_maladies.id_maladie " +
+                "JOIN symptomes ON symptomes_maladies.id_symptome = symptomes.id_symptome " +
+                "WHERE symptomes.description = ?"
+),
+DIAGNOSTIC_PATIENT(
+"SELECT DISTINCT maladies.nom FROM maladies " +
+"JOIN symptomes_maladies ON maladies.id = symptomes_maladies.id_maladie " +
+"JOIN symptomes ON symptomes_maladies.id_symptome = symptomes.id_symptome " +
+"JOIN patients_symptomes ON symptomes.id_symptome = patients_symptomes.id_symptome " +
+"WHERE patients_symptomes.id_patient = ?"
+    );
+
 
         private final String query;
 
@@ -91,8 +112,29 @@ public class XMartCityService {
             case SELECT_ALL_MEDICAMENTS:
                 response = SelectAllMedicaments(request, connection);
                 break;
+                case SELECT_ALL_SYMPTOMES:
+                response = SelectAllSymptomes(request, connection);
+                break;
+            case INSERT_SYMPTOME:
+                response = InsertSymptome(request, connection);
+                break;
+            case DELETE_SYMPTOME:
+                response = DeleteSymptome(request, connection);
+                break;
+            case UPDATE_SYMPTOME:
+                response = UpdateSymptome(request, connection);
+                break;
+            case DIAGNOSTIC_PATIENT:
+                response = DiagnostiquerPatient(request, connection);
+                break;
+            case RECHERCHER_MALADIES_PAR_SYMPTOME:
+                response = rechercherMaladiesParSymptome(request, connection);
+                break;
+
+
 
             default:
+
                 break;
         }
         return response;
@@ -172,7 +214,6 @@ public class XMartCityService {
         }
     }
 
-    // Le reste des méthodes reste inchangé
     private Response SelectAllOrdonnances(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -293,5 +334,119 @@ public class XMartCityService {
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(medicaments));
         }
     }
+    private Response SelectAllSymptomes(final Request request, final Connection connection)
+        throws SQLException, JsonProcessingException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    try (Statement stmt = connection.createStatement();
+         ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_SYMPTOMES.query)) {
+
+        List<Symptomes> symptomes = new ArrayList<>();
+        while (res.next()) {
+            Symptomes symptome = new Symptomes();
+            symptome.setId(res.getInt("id"));
+            symptome.setNom(res.getString("nom"));
+            symptomes.add(symptome);
+        }
+
+        System.out.println("Symptômes récupérés depuis la BD : " + symptomes); 
+
+        return new Response(request.getRequestId(),
+                symptomes.isEmpty() ? "Aucun symptôme trouvé"
+                        : objectMapper.writeValueAsString(symptomes));
+    }
+}
+
+
+private Response InsertSymptome(final Request request, final Connection connection)
+        throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    Symptomes symptome = objectMapper.readValue(request.getRequestBody(), Symptomes.class);
+
+    try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_SYMPTOME.query)) {
+        pstmt.setString(1, symptome.getNom());
+        int rowsAffected = pstmt.executeUpdate();
+
+        return rowsAffected > 0
+                ? new Response(request.getRequestId(), "{\"message\": \"Symptôme ajouté avec succès\"}")
+                : new Response(request.getRequestId(), "{\"message\": \"Échec de l'ajout du symptôme\"}");
+    }
+}
+
+    private Response DeleteSymptome(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Symptomes symptome = objectMapper.readValue(request.getRequestBody(), Symptomes.class);
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_SYMPTOME.query)) {
+            pstmt.setString(1, symptome.getNom()); 
+            int rowsAffected = pstmt.executeUpdate();
+
+            return rowsAffected > 0
+                    ? new Response(request.getRequestId(), "{\"message\": \"Symptôme supprimé avec succès\"}")
+                    : new Response(request.getRequestId(), "{\"message\": \"Aucun symptôme trouvé à supprimer\"}");
+        }
+    }
+
+
+    private Response UpdateSymptome(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        String[] updateData = objectMapper.readValue(request.getRequestBody(), String[].class); // ✅
+
+        String ancienNom = updateData[0];
+        String nouveauNom = updateData[1];
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.UPDATE_SYMPTOME.query)) {
+            pstmt.setString(1, nouveauNom);
+            pstmt.setString(2, ancienNom); 
+            int rowsAffected = pstmt.executeUpdate();
+
+            return rowsAffected > 0
+                    ? new Response(request.getRequestId(), "{\"message\": \"Symptôme mis à jour avec succès\"}")
+                    : new Response(request.getRequestId(), "{\"message\": \"Aucun symptôme trouvé pour mise à jour\"}");
+        }
+    }
+
+
+private Response DiagnostiquerPatient(final Request request, final Connection connection)
+        throws SQLException, JsonProcessingException, IOException { 
+    final ObjectMapper objectMapper = new ObjectMapper();
+    int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class); 
+
+    try (PreparedStatement pstmt = connection.prepareStatement(Queries.DIAGNOSTIC_PATIENT.query)) {
+        pstmt.setInt(1, idPatient);
+        ResultSet res = pstmt.executeQuery();
+
+        List<String> maladies = new ArrayList<>();
+        while (res.next()) {
+            maladies.add(res.getString("nom"));
+        }
+
+        return new Response(request.getRequestId(),
+                maladies.isEmpty() ? "Aucune maladie trouvée" : objectMapper.writeValueAsString(maladies));
+    }
+}
+
+    private Response rechercherMaladiesParSymptome(final Request request, final Connection connection)
+            throws SQLException, IOException {
+
+        final ObjectMapper objectMapper = new ObjectMapper();
+        String symptomeNom = objectMapper.readValue(request.getRequestBody(), String.class);
+
+        List<String> maladies = new ArrayList<>();
+
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.RECHERCHER_MALADIES_PAR_SYMPTOME.query)) {
+            pstmt.setString(1, symptomeNom);
+            ResultSet res = pstmt.executeQuery();
+
+            while (res.next()) {
+                maladies.add(res.getString("nom"));
+            }
+        }
+
+        return new Response(request.getRequestId(),
+                maladies.isEmpty() ? "Aucune maladie trouvée" : objectMapper.writeValueAsString(maladies));
+    }
+
 
 }

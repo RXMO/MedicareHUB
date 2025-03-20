@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ConfigLoader;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
+import edu.ezip.ing1.pds.frontend.FenetreDiagnostic;
 import edu.ezip.ing1.pds.frontend.OrdonnanceFrontEnd;
 import edu.ezip.ing1.pds.services.MedicamentService;
 import edu.ezip.ing1.pds.services.OrdonnanceService;
@@ -73,9 +74,9 @@ public class MainFrontEnd {
 
         // ActionListener pour le bouton Afrah (ouvre l'interface FenetreDiagnostic)
         btnAfrah.addActionListener(e -> {
-           // FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
-            //fenetreDiagnostic.setVisible(true);  // Affiche la fenêtre directement ici
-            //fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
+           FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
+        fenetreDiagnostic.setVisible(true);  // Affiche la fenêtre directement ici
+        fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
         });
 
         // ActionListener pour le bouton Emna (ouvre l'interface OrdonnanceFrontEnd)

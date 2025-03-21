@@ -247,18 +247,18 @@ public class OrdonnanceFrontEnd extends JFrame {
         String idConsultationStr = idConsultationField.getText();
         String description = descriptionField.getText();
         String idMedecin = idMedecinField.getText();
-
+    
         // Récupérer les médicaments sélectionnés
         List<String> selectedMedicaments = medicamentCheckboxes.stream()
             .filter(JCheckBox::isSelected)
             .map(JCheckBox::getText)
             .collect(Collectors.toList());
-
+    
         if (idPatient.isEmpty() || idConsultationStr.isEmpty() || idMedecin.isEmpty() || selectedMedicaments.isEmpty()) {
             JOptionPane.showMessageDialog(null, "Tous les champs d'ID doivent être remplis et au moins un médicament doit être sélectionné");
             return;
         }
-
+    
         // Vérifier les principes actifs dupliqués
         String duplicateError = checkDuplicatePrincipesActifs(selectedMedicaments);
         if (duplicateError != null) {
@@ -268,33 +268,36 @@ public class OrdonnanceFrontEnd extends JFrame {
                 JOptionPane.WARNING_MESSAGE);
             return;
         }
-
+    
         try {
             int idConsultation = Integer.parseInt(idConsultationStr);
             int idMedecinInt = Integer.parseInt(idMedecin);
-
+    
+            // Afficher les données saisies dans displayArea avant d'enregistrer
+            clearDisplayArea(); // Effacer le contenu précédent
+            displayArea.append("Données à enregistrer :\n");
+            displayArea.append("ID Patient: " + idPatient + "\n");
+            displayArea.append("ID Consultation: " + idConsultation + "\n");
+            displayArea.append("ID Médecin: " + idMedecinInt + "\n");
+            displayArea.append("Description: " + description + "\n");
+            displayArea.append("Médicaments: " + String.join(", ", selectedMedicaments) + "\n");
+            displayArea.append("-----------------------------\n");
+    
             Ordonnance newOrdonnance = new Ordonnance();
             newOrdonnance.setIdOrdonnance(Ordonnance.generateIdOrdonnance());
             newOrdonnance.setIdPatient(Integer.parseInt(idPatient));
             newOrdonnance.setIdConsultation(idConsultation);
             newOrdonnance.setIdMedecin(idMedecinInt);
             newOrdonnance.setDescription(description);
-
+    
             ordonnanceService.insertOrdonnance(newOrdonnance, selectedMedicaments);
-
-            displayArea.append("Ordonnance enregistrée :\n");
-            displayArea.append("ID Patient: " + idPatient + "\n");
-            displayArea.append("ID Consultation: " + idConsultation + "\n");
-            displayArea.append("Description: " + description + "\n");
-            displayArea.append("ID Médecin: " + idMedecin + "\n");
-            displayArea.append("Médicaments: " + String.join(", ", selectedMedicaments) + "\n");
-            displayArea.append("-----------------------------\n");
-
-            // Rafraîchir et réinitialiser
+    
+            // Rafraîchir la liste des ordonnances
             actualiserOrdonnances();
-            resetFields();
-            clearDisplayArea();
-
+            
+            // Ne pas réinitialiser les champs et effacer le displayArea après
+            // l'enregistrement pour que l'utilisateur puisse voir les données
+    
             JOptionPane.showMessageDialog(null, "Ordonnance enregistrée avec succès");
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(null, "Veuillez entrer des valeurs valides pour les ID.");
@@ -376,7 +379,6 @@ public class OrdonnanceFrontEnd extends JFrame {
                         break;
                     }
                 }
-                
             }
         } catch (Exception ex) {
             logger.error("Erreur lors de la récupération des médicaments de l'ordonnance", ex);
@@ -384,85 +386,98 @@ public class OrdonnanceFrontEnd extends JFrame {
     
         // Activer le mode modification
         enModeModification = true;
-        toggleEditMode(true);
-    
-        JOptionPane.showMessageDialog(null, "Vous pouvez maintenant modifier les informations de l'ordonnance.");
+        
+        // Rendre le bouton confirmer visible SANS MODIFIER LES AUTRES BOUTONS
+        confirmerButton.setVisible(true);
     }
 
     
-private void handleConfirmButton() {
-    try {
-        if (currentOrdonnanceId == -1) {
-            JOptionPane.showMessageDialog(null, "Erreur: ID d'ordonnance invalide.");
-            return;
-        }
-
-        // Récupérer les médicaments sélectionnés
-        List<String> selectedMedicamentNames = medicamentCheckboxes.stream()
-            .filter(JCheckBox::isSelected)
-            .map(JCheckBox::getText)
-            .collect(Collectors.toList());
-
-        if (selectedMedicamentNames.isEmpty()) {
-            JOptionPane.showMessageDialog(null, "Veuillez sélectionner au moins un médicament.");
-            return;
-        }
-
-        String duplicateMessage = checkDuplicatePrincipesActifs(selectedMedicamentNames);
-        if (duplicateMessage != null) {
-            int response = JOptionPane.showConfirmDialog(null, 
-                "Attention: Vous avez sélectionné des médicaments avec le même principe actif!\n\n" + 
-                duplicateMessage + "\n\nVoulez-vous continuer quand même?",
-                "Risque d'interaction médicamenteuse", 
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-            
-            if (response != JOptionPane.YES_OPTION) {
+    private void handleConfirmButton() {
+        try {
+            if (currentOrdonnanceId == -1) {
+                JOptionPane.showMessageDialog(null, "Erreur: ID d'ordonnance invalide.");
                 return;
             }
-        }
-
-        // Vérifier que tous les champs sont remplis
-        if (idPatientField.getText().isEmpty() || idConsultationField.getText().isEmpty() || 
-            idMedecinField.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(null, "Tous les champs d'ID doivent être remplis");
-            return;
-        }
-
-        // Créer l'objet Ordonnance pour la mise à jour
-        Ordonnance ordonnanceToUpdate = new Ordonnance();
-        ordonnanceToUpdate.setIdOrdonnance(currentOrdonnanceId);
-        ordonnanceToUpdate.setIdPatient(Integer.parseInt(idPatientField.getText()));
-        ordonnanceToUpdate.setIdConsultation(Integer.parseInt(idConsultationField.getText()));
-        ordonnanceToUpdate.setIdMedecin(Integer.parseInt(idMedecinField.getText()));
-        ordonnanceToUpdate.setDescription(descriptionField.getText());
-
-        // Mettre à jour l'ordonnance avec les médicaments
-        logger.debug("Tentative de mise à jour de l'ordonnance ID: " + currentOrdonnanceId);
-        boolean success = ordonnanceService.updateOrdonnance(ordonnanceToUpdate, selectedMedicamentNames);
-        
-        if (success) {
-            logger.debug("Mise à jour réussie");
-            // Réinitialiser l'UI
-            actualiserOrdonnances();
-            resetFields();
-            clearDisplayArea();
-            enModeModification = false;
-            toggleEditMode(false); // Sortir du mode édition
+    
+            // Récupérer les médicaments sélectionnés
+            List<String> selectedMedicamentNames = medicamentCheckboxes.stream()
+                .filter(JCheckBox::isSelected)
+                .map(JCheckBox::getText)
+                .collect(Collectors.toList());
+    
+            if (selectedMedicamentNames.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Veuillez sélectionner au moins un médicament.");
+                return;
+            }
+    
+            String duplicateMessage = checkDuplicatePrincipesActifs(selectedMedicamentNames);
+            if (duplicateMessage != null) {
+                int response = JOptionPane.showConfirmDialog(null, 
+                    "Attention: Vous avez sélectionné des médicaments avec le même principe actif!\n\n" + 
+                    duplicateMessage + "\n\nVoulez-vous continuer quand même?",
+                    "Risque d'interaction médicamenteuse", 
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+                
+                if (response != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+    
+            // Vérifier que tous les champs sont remplis
+            if (idPatientField.getText().isEmpty() || idConsultationField.getText().isEmpty() || 
+                idMedecinField.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(null, "Tous les champs d'ID doivent être remplis");
+                return;
+            }
+    
+            // Créer l'objet Ordonnance pour la mise à jour
+            Ordonnance ordonnanceToUpdate = new Ordonnance();
+            ordonnanceToUpdate.setIdOrdonnance(currentOrdonnanceId);
+            ordonnanceToUpdate.setIdPatient(Integer.parseInt(idPatientField.getText()));
+            ordonnanceToUpdate.setIdConsultation(Integer.parseInt(idConsultationField.getText()));
+            ordonnanceToUpdate.setIdMedecin(Integer.parseInt(idMedecinField.getText()));
+            ordonnanceToUpdate.setDescription(descriptionField.getText());
+    
+            // Mettre à jour l'ordonnance avec les médicaments
+            logger.debug("Tentative de mise à jour de l'ordonnance ID: " + currentOrdonnanceId);
+            boolean success = ordonnanceService.updateOrdonnance(ordonnanceToUpdate, selectedMedicamentNames);
             
-            JOptionPane.showMessageDialog(null, "Ordonnance modifiée avec succès");
-        } else {
-            logger.error("Échec de la mise à jour - aucune erreur signalée");
-            JOptionPane.showMessageDialog(null, "La modification de l'ordonnance a échoué.");
+            if (success) {
+                logger.debug("Mise à jour réussie");
+                // Afficher les données modifiées dans le displayArea
+                clearDisplayArea();
+                displayArea.append("Ordonnance modifiée :\n");
+                displayArea.append("ID Ordonnance: " + currentOrdonnanceId + "\n");
+                displayArea.append("ID Patient: " + idPatientField.getText() + "\n");
+                displayArea.append("ID Consultation: " + idConsultationField.getText() + "\n");
+                displayArea.append("ID Médecin: " + idMedecinField.getText() + "\n");
+                displayArea.append("Description: " + descriptionField.getText() + "\n");
+                displayArea.append("Médicaments: " + String.join(", ", selectedMedicamentNames) + "\n");
+                displayArea.append("-----------------------------\n");
+                
+                // Réinitialiser l'UI et les variables d'état
+                actualiserOrdonnances();
+                
+                // Réinitialiser le mode de modification
+                enModeModification = false;
+                
+                // Seulement masquer le bouton confirmer
+                confirmerButton.setVisible(false);
+                
+                // Réinitialiser currentOrdonnanceId
+                currentOrdonnanceId = -1;
+                
+                JOptionPane.showMessageDialog(null, "Ordonnance modifiée avec succès");
+            }
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(null, "Veuillez entrer des valeurs valides pour les ID.");
+            logger.error("Erreur de format de nombre", ex);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(null, "Erreur lors de la modification de l'ordonnance: " + ex.getMessage());
+            logger.error("Erreur lors de la modification", ex);
         }
-    } catch (NumberFormatException ex) {
-        JOptionPane.showMessageDialog(null, "Veuillez entrer des valeurs valides pour les ID.");
-        logger.error("Erreur de format de nombre", ex);
-    } catch (Exception ex) {
-        JOptionPane.showMessageDialog(null, "Erreur lors de la modification de l'ordonnance: " + ex.getMessage());
-        logger.error("Erreur lors de la modification", ex);
     }
-}
     private void resetFields() {
         idPatientField.setText("");
         idConsultationField.setText("");
@@ -487,32 +502,6 @@ private void handleConfirmButton() {
         displayArea.setText("");
     }
 
-
-    private void toggleEditMode(boolean editMode) {
-        // Rendre les champs modifiables ou non selon le mode
-        idPatientField.setEditable(editMode);
-        idConsultationField.setEditable(editMode);
-        idMedecinField.setEditable(editMode);
-        descriptionField.setEditable(editMode);
-        
-        // S'assurer que les champs sont activés
-        idPatientField.setEnabled(true);
-        idConsultationField.setEnabled(true);
-        idMedecinField.setEnabled(true);
-        descriptionField.setEnabled(true);
-    
-        // Gérer l'état des boutons
-        confirmerButton.setVisible(editMode);
-        
-        // L'inverse de editMode pour les autres boutons
-        saveButton.setEnabled(!editMode);
-        supprimerButton.setEnabled(!editMode);
-        afficherButton.setEnabled(!editMode);
-        modifierButton.setEnabled(!editMode);
-        
-        // Rendre la table non sélectionnable pendant l'édition
-        ordonnanceTable.setEnabled(!editMode);
-    }
 
     private void filterMedicaments(String searchText) {
         medicamentCheckboxPanel.removeAll();

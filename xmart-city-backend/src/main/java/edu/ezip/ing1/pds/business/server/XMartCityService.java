@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import edu.ezip.ing1.pds.business.dto.Medecin;
+import edu.ezip.ing1.pds.business.dto.Medecins;
 import edu.ezip.ing1.pds.business.dto.Medicament;
 import edu.ezip.ing1.pds.business.dto.Medicaments;
 import edu.ezip.ing1.pds.business.dto.Ordonnance;
@@ -29,6 +31,12 @@ public class XMartCityService {
     private final Logger logger = LoggerFactory.getLogger(LoggingLabel);
 
     private enum Queries {
+        SELECT_ALL_MEDECINS("SELECT * FROM medecins "),
+        INSERT_MEDECINS(
+                "INSERT INTO `medecins`(`id_medecin`, `nom_medecin`, `prenom_medecin`, `num_tel`, `id_specialite`) VALUES (?,?, ?, ?,?)"),
+        UPDATE_MEDECIN(
+                "UPDATE medecins SET nom_medecin = ?, prenom_medecin = ?,num_tel =?, id_specialite = ? WHERE id_medecin = ?"),
+        DELETE_MEDECIN("DELETE FROM medecins WHERE id_medecin = ?"),
         SELECT_ALL_PATIENTS("SELECT id_patient, nom_patient, prenom_patient, num_tel, allergies FROM Patients "),
         INSERT_PATIENT(
                 "INSERT INTO Patients (id_patient,nom_patient, prenom_patient, num_tel, allergies) VALUES (?,?, ?, ?, ?)"),
@@ -36,8 +44,10 @@ public class XMartCityService {
                 "UPDATE Patients SET nom_patient = ?, prenom_patient = ?, num_tel = ?, allergies = ? WHERE id_patient = ?"),
         DELETE_PATIENT("DELETE FROM Patients WHERE id_patient = ?"),
         SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance ORDER BY id_ordonnance DESC"),
-        INSERT_ORDONNANCE("INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
-        UPDATE_ORDONNANCE("UPDATE ordonnance SET description = ?, id_patient = ?, id_medecin = ?, id_consultation = ? WHERE id_ordonnance = ?"),        
+        INSERT_ORDONNANCE(
+                "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
+        UPDATE_ORDONNANCE(
+                "UPDATE ordonnance SET description = ?, id_patient = ?, id_medecin = ?, id_consultation = ? WHERE id_ordonnance = ?"),
         DELETE_ORDONNANCE("DELETE FROM ordonnance WHERE id_ordonnance = ?"),
         INSERT_PRESCRIPTION("INSERT INTO Prescription (id_ordonnance, id_medicament, posologie) VALUES (?, ?, ?)"),
         SELECT_ALL_MEDICAMENTS("SELECT id_medicament, nom_medicament, principe_actif FROM medicament"),
@@ -70,10 +80,21 @@ public class XMartCityService {
         Response response = null;
         final Queries queryEnum = Enum.valueOf(Queries.class, request.getRequestOrder());
         switch (queryEnum) {
+            case SELECT_ALL_MEDECINS:
+                response = SelectAllMedecins(request, connection);
+                break;
+            case INSERT_MEDECINS:
+                response = InsertMedecin(request, connection);
+                break;
+            case UPDATE_MEDECIN:
+                response = UpdateMedecin(request, connection);
+                break;
+            case DELETE_MEDECIN:
+                response = DeleteMedecin(request, connection);
+                break;
             case SELECT_ALL_PATIENTS:
                 response = SelectAllPatients(request, connection);
                 break;
-
             case INSERT_PATIENT:
                 response = InsertPatient(request, connection);
                 break;
@@ -95,15 +116,77 @@ public class XMartCityService {
             case SELECT_ALL_MEDICAMENTS:
                 response = SelectAllMedicaments(request, connection);
                 break;
-            // Dans la méthode dispatch, ajoutez ce cas dans le switch :
             case UPDATE_ORDONNANCE:
-                 response = UpdateOrdonnance(request, connection);
-                 break;
+                response = UpdateOrdonnance(request, connection);
+                break;
 
             default:
                 break;
         }
         return response;
+    }
+
+    private Response SelectAllMedecins(final Request request, final Connection connection)
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        try (Statement stmt = connection.createStatement();
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDECINS.query)) {
+            Medecins medecins = new Medecins();
+            while (res.next()) {
+                Medecin medecin = new Medecin();
+                medecin.setIdMedecin(res.getInt("id_medecin"));
+                medecin.setNomMedecin(res.getString("nom_medecin"));
+                medecin.setPrenomMedecin(res.getString("prenom_medecin"));
+                medecin.setSpecialite(res.getString("id_specialite"));
+                medecin.setNumTel(res.getString("num_tel"));
+                medecins.add(medecin);
+            }
+            return new Response(request.getRequestId(), objectMapper.writeValueAsString(medecins));
+        }
+    }
+
+    private Response InsertMedecin(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Medecin requestData = objectMapper.readValue(request.getRequestBody(), Medecin.class);
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_MEDECINS.query)) {
+            pstmt.setInt(1, requestData.getIdMedecin());
+            pstmt.setString(2, requestData.getNomMedecin());
+            pstmt.setString(3, requestData.getPrenomMedecin());
+            pstmt.setString(4, requestData.getSpecialite());
+            pstmt.setString(5, requestData.getNumTel());
+            int rowsAffected = pstmt.executeUpdate();
+            return new Response(request.getRequestId(),
+                    rowsAffected > 0 ? "Médecin ajouté avec succès" : "Échec de l'ajout du médecin");
+        }
+    }
+
+    private Response UpdateMedecin(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Medecin requestData = objectMapper.readValue(request.getRequestBody(), Medecin.class);
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.UPDATE_MEDECIN.query)) {
+            pstmt.setString(1, requestData.getNomMedecin());
+            pstmt.setString(2, requestData.getPrenomMedecin());
+            pstmt.setString(3, requestData.getSpecialite());
+            pstmt.setString(4, requestData.getNumTel());
+            pstmt.setInt(5, requestData.getIdMedecin());
+            int rowsAffected = pstmt.executeUpdate();
+            return new Response(request.getRequestId(),
+                    rowsAffected > 0 ? "Médecin mis à jour avec succès" : "Aucun médecin trouvé pour mise à jour");
+        }
+    }
+
+    private Response DeleteMedecin(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Medecin requestData = objectMapper.readValue(request.getRequestBody(), Medecin.class);
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_MEDECIN.query)) {
+            pstmt.setInt(1, requestData.getIdMedecin());
+            int rowsAffected = pstmt.executeUpdate();
+            return new Response(request.getRequestId(),
+                    rowsAffected > 0 ? "Médecin supprimé avec succès" : "Aucun médecin trouvé à supprimer");
+        }
     }
 
     private Response UpdatePatient(final Request request, final Connection connection)
@@ -123,43 +206,9 @@ public class XMartCityService {
             pstmt.setString(3, numTel);
             pstmt.setString(4, allergies);
             pstmt.setInt(5, idPatient);
-
             int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                return new Response(request.getRequestId(), "{\"message\": \"Patient mis à jour avec succès\"}");
-            } else {
-                return new Response(request.getRequestId(), "{\"message\": \"Aucun patient trouvé pour mise à jour\"}");
-            }
-        }
-    }
-
-    private Response InsertPatient(final Request request, final Connection connection)
-            throws SQLException, IOException {
-        final ObjectMapper objectMapper = new ObjectMapper();
-        Patient requestData = objectMapper.readValue(request.getRequestBody(),
-                Patient.class);
-
-        String nomPatient = requestData.getNomPatient();
-        String prenomPatient = requestData.getPrenomPatient();
-        String numTel = requestData.getNumTel();
-        String allergies = requestData.getAllergies();
-        int idPatient = requestData.getIdPatient();
-
-        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_PATIENT.query)) {
-            pstmt.setInt(1, idPatient);
-            pstmt.setString(2, nomPatient);
-            pstmt.setString(3, prenomPatient);
-            pstmt.setString(4, numTel);
-            pstmt.setString(5, allergies);
-
-            int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                return new Response(request.getRequestId(), "{\"message\": \"Patient ajouté avec succès\"}");
-            } else {
-                return new Response(request.getRequestId(), "{\"message\": \"Échec de l'ajout du patient\"}");
-            }
+            return new Response(request.getRequestId(),
+                    rowsAffected > 0 ? "Patient mis à jour avec succès" : "Échec de la mise à jour du patient");
         }
     }
 
@@ -168,7 +217,6 @@ public class XMartCityService {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
                 ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_PATIENTS.query)) {
-
             Patients patients = new Patients();
             while (res.next()) {
                 Patient patient = new Patient();
@@ -179,12 +227,23 @@ public class XMartCityService {
                 patient.setAllergies(res.getString("allergies"));
                 patients.add(patient);
             }
-
-            if (patients.getPatients().isEmpty()) {
-                return new Response(request.getRequestId(), "Aucun patient trouvé");
-            }
-
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(patients));
+        }
+    }
+
+    private Response InsertPatient(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Patient requestData = objectMapper.readValue(request.getRequestBody(), Patient.class);
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_PATIENT.query)) {
+            pstmt.setInt(1, requestData.getIdPatient());
+            pstmt.setString(2, requestData.getNomPatient());
+            pstmt.setString(3, requestData.getPrenomPatient());
+            pstmt.setString(4, requestData.getNumTel());
+            pstmt.setString(5, requestData.getAllergies());
+            int rowsAffected = pstmt.executeUpdate();
+            return new Response(request.getRequestId(),
+                    rowsAffected > 0 ? "Patient ajouté avec succès" : "Échec de l'ajout du patient");
         }
     }
 
@@ -192,19 +251,11 @@ public class XMartCityService {
             throws SQLException, IOException {
         final ObjectMapper objectMapper = new ObjectMapper();
         Patient requestData = objectMapper.readValue(request.getRequestBody(), Patient.class);
-
-        int idPatient = requestData.getIdPatient();
-
         try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_PATIENT.query)) {
-            pstmt.setInt(1, idPatient);
-
+            pstmt.setInt(1, requestData.getIdPatient());
             int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                return new Response(request.getRequestId(), "{\"message\": \"Patient supprimé avec succès\"}");
-            } else {
-                return new Response(request.getRequestId(), "{\"message\": \"Aucun patient trouvé à supprimer\"}");
-            }
+            return new Response(request.getRequestId(),
+                    rowsAffected > 0 ? "Patient supprimé avec succès" : "Échec de la suppression du patient");
         }
     }
 
@@ -306,27 +357,28 @@ public class XMartCityService {
             return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
     }
+
     private Response UpdateOrdonnance(final Request request, final Connection connection)
-        throws SQLException, IOException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    Ordonnance ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        Ordonnance ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
 
-    try (PreparedStatement pstmt = connection.prepareStatement(Queries.UPDATE_ORDONNANCE.query)) {
-        pstmt.setString(1, ordonnance.getDescription());
-        pstmt.setInt(2, ordonnance.getIdPatient());
-        pstmt.setInt(3, ordonnance.getIdMedecin());
-        pstmt.setInt(4, ordonnance.getIdConsultation());
-        pstmt.setInt(5, ordonnance.getIdOrdonnance());
-        
-        int rowsAffected = pstmt.executeUpdate();
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.UPDATE_ORDONNANCE.query)) {
+            pstmt.setString(1, ordonnance.getDescription());
+            pstmt.setInt(2, ordonnance.getIdPatient());
+            pstmt.setInt(3, ordonnance.getIdMedecin());
+            pstmt.setInt(4, ordonnance.getIdConsultation());
+            pstmt.setInt(5, ordonnance.getIdOrdonnance());
 
-        if (rowsAffected > 0) {
-            return new Response(request.getRequestId(), "Ordonnance mise à jour avec succès");
-        } else {
-            return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour mise à jour");
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                return new Response(request.getRequestId(), "Ordonnance mise à jour avec succès");
+            } else {
+                return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour mise à jour");
+            }
         }
     }
-}
 
     private Response SelectAllMedicaments(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
@@ -350,6 +402,5 @@ public class XMartCityService {
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(medicaments));
         }
     }
-
 
 }

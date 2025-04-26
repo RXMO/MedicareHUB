@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+    <?import javafx.scene.layout.*?>
+    <?import javafx.geometry.Insets?>
+
+    <VBox xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="edu.ezip.ing1.pds.frontend.OrdonnanceListController"
+          spacing="10">
+          <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        
+        <Label text="Liste des Ordonnances" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+        
+        <TableView fx:id="ordonnanceTableView" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="75"/>
+                <TableColumn fx:id="patientColumn" text="Patient ID" prefWidth="100"/>
+                <TableColumn fx:id="consultationColumn" text="Consultation ID" prefWidth="120"/>
+                <TableColumn fx:id="medecinColumn" text="Médecin ID" prefWidth="100"/>
+                <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="250"/>
+            </columns>
+            <placeholder>
+                <Label text="Aucune ordonnance trouvée"/>
+            </placeholder>
+        </TableView>
+        
+        <HBox spacing="10" alignment="CENTER_RIGHT">
+            <Button fx:id="selectButton" text="Sélectionner" />
+            <Button fx:id="closeButton" text="Fermer" />
+        </HBox>
+        
+    </VBox>

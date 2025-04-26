@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2015, 2019, Gluon and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane prefHeight="500.0" prefWidth="800.0" style="-fx-background-color: #f5f7fa;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+     <top>
+        <HBox alignment="CENTER" prefHeight="60.0" style="-fx-background-color: #2c3e50; -fx-padding: 15px;">
+           <children>
+              <Label text="Système de Gestion des Ordonnances" textFill="WHITE">
+                 <font>
+                    <Font name="System Bold" size="18.0" />
+                 </font>
+              </Label>
+           </children>
+        </HBox>
+     </top>
+     <center>
+        <VBox spacing="15.0">
+           <padding>
+              <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+           </padding>
+           <children>
+              <!-- Section des identifiants -->
+              <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-background-color: white; -fx-background-radius: 5; -fx-padding: 15;">
+                 <children>
+                    <VBox spacing="5.0">
+                       <children>
+                          <Label style="-fx-font-weight: bold;" text="ID Patient:">
+                             <font>
+                                <Font size="13.0" />
+                             </font>
+                          </Label>
+                          <TextField fx:id="idPatientField" promptText="Entrez ID patient" style="-fx-padding: 7; -fx-background-radius: 3;" />
+                       </children>
+                    </VBox>
+                    <VBox spacing="5.0">
+                       <children>
+                          <Label style="-fx-font-weight: bold;" text="ID Médecin:">
+                             <font>
+                                <Font size="13.0" />
+                             </font>
+                          </Label>
+                          <TextField fx:id="idMedecinField" promptText="Entrez ID médecin" style="-fx-padding: 7; -fx-background-radius: 3;" />
+                       </children>
+                    </VBox>
+                    <VBox spacing="5.0">
+                       <children>
+                          <Label style="-fx-font-weight: bold;" text="ID Consultation:">
+                             <font>
+                                <Font size="13.0" />
+                             </font>
+                          </Label>
+                          <TextField fx:id="idConsultationField" promptText="Entrez ID consultation" style="-fx-padding: 7; -fx-background-radius: 3;" />
+                       </children>
+                    </VBox>
+                 </children>
+              </HBox>
+              
+              <!-- Section principale -->
+              <HBox spacing="15.0" VBox.vgrow="ALWAYS">
+                 <children>
+                    <!-- Section médicaments -->
+                    <VBox minWidth="350.0" prefHeight="243.0" prefWidth="452.0" spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 5; -fx-padding: 15;">
+                       <children>
+                          <Label style="-fx-font-weight: bold; -fx-font-size: 14;" text="Recherche de médicaments">
+                             <font>
+                                <Font size="14.0" />
+                             </font>
+                          </Label>
+                          <Separator />
+                          <HBox alignment="CENTER_LEFT" spacing="10.0">
+                             <children>
+                                <TextField fx:id="searchMedicamentField" promptText="Nom du médicament" style="-fx-padding: 7; -fx-background-radius: 3;" HBox.hgrow="ALWAYS" />
+                                <Button style="-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-padding: 7 10; -fx-background-radius: 3;" text="Rechercher" />
+                             </children>
+                          </HBox>
+                          <!-- En-tête des colonnes -->
+                          <HBox alignment="CENTER_LEFT" prefHeight="27.0" prefWidth="411.0" spacing="10.0" style="-fx-padding: 5 0;">
+                             <children>
+                                <Label prefHeight="18.0" prefWidth="174.0" style="-fx-font-weight: bold;" text="Médicament" />
+                                <Label style="-fx-font-weight: bold;" text="Posologie" HBox.hgrow="ALWAYS" />
+                             </children>
+                          </HBox>
+                          <ScrollPane fx:id="medicamentScrollPane" style="-fx-background-color: transparent; -fx-border-color: #e0e0e0; -fx-border-radius: 3;" VBox.vgrow="ALWAYS">
+                             <content>
+                                <AnchorPane minHeight="0.0" minWidth="0.0">
+                                   <children>
+                                      <VBox fx:id="medicamentCheckboxContainer" spacing="8.0" style="-fx-padding: 10;" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                         <!-- Les conteneurs HBox seront ajoutés dynamiquement ici -->
+                                         <!-- Exemple statique (sera remplacé par le code dynamique) -->
+                                         <children>
+                                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                               <children>
+                                                  <CheckBox mnemonicParsing="false" prefWidth="150.0" />
+                                                  <TextField disable="true" promptText="Posologie..." HBox.hgrow="ALWAYS" />
+                                               </children>
+                                            </HBox>
+                                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                               <children>
+                                                  <CheckBox mnemonicParsing="false" prefWidth="150.0" />
+                                                  <TextField disable="true" promptText="Posologie..." HBox.hgrow="ALWAYS" />
+                                               </children>
+                                            </HBox>
+                                         </children>
+                                      </VBox>
+                                   </children>
+                                </AnchorPane>
+                             </content>
+                          </ScrollPane>
+                       </children>
+                    </VBox>
+                    
+                    <!-- Section affichage -->
+                    <VBox spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 5; -fx-padding: 15;" HBox.hgrow="ALWAYS">
+                       <children>
+                          <Label style="-fx-font-weight: bold; -fx-font-size: 14;" text="Détails de l'ordonnance">
+                             <font>
+                                <Font size="14.0" />
+                             </font>
+                          </Label>
+                          <Separator />
+                          <TextArea fx:id="displayArea" prefHeight="157.0" prefWidth="329.0" promptText="Les détails de l'ordonnance s'afficheront ici..." style="-fx-background-radius: 3; -fx-border-radius: 3; -fx-padding: 5;" wrapText="true" VBox.vgrow="ALWAYS" />
+                       </children>
+                    </VBox>
+                 </children>
+              </HBox>
+           </children>
+        </VBox>
+     </center>
+     <bottom>
+        <HBox alignment="CENTER" spacing="10.0" style="-fx-background-color: #ecf0f1; -fx-padding: 15; -fx-border-width: 1 0 0 0; -fx-border-color: #dcdfe2;">
+           <children>
+              <Button fx:id="showOrdonnancesButton" style="-fx-background-color: #e0e0e0; -fx-text-fill: #333333; -fx-padding: 8 15; -fx-background-radius: 3;" text="Afficher les Ordonnances" />
+              <HBox alignment="CENTER_RIGHT" spacing="10.0" HBox.hgrow="ALWAYS">
+                 <children>
+                    <Button fx:id="addButton" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 3;" text="Ajouter" />
+                    <Button fx:id="displayButton" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 3;" text="Afficher" />
+                    <Button fx:id="modifyButton" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 3;" text="Modifier" />
+                    <Button fx:id="deleteButton" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 3;" text="Supprimer" />
+                    <Button fx:id="confirmButton" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 8 15; -fx-background-radius: 3;" text="Confirmer" />
+                 </children>
+              </HBox>
+           </children>
+        </HBox>
+     </bottom>
+  </BorderPane>

@@ -345,3 +345,4 @@ private void supprimerSymptome() {
         SwingUtilities.invokeLater(() -> new FenetreDiagnostic().setVisible(true));
     }
 }
+//

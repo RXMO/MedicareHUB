@@ -12,6 +12,7 @@ import org.slf4j.event.Level;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import edu.ezip.commons.LoggingUtils;
 import edu.ezip.ing1.pds.business.dto.Symptomes;
@@ -35,6 +36,11 @@ public class ServiceSymptome {
     final String deleteRequestOrder = "DELETE_SYMPTOME";
     final String updateRequestOrder = "UPDATE_SYMPTOME";
     
+    final String insertPatientSymptomeRequestOrder = "INSERT_PATIENT_SYMPTOME";
+    final String selectPatientSymptomesRequestOrder = "SELECT_PATIENT_SYMPTOMES";
+    final String diagnosticPatientRequestOrder = "DIAGNOSTIC_PATIENT";
+    final String modifyPatientSymptomeRequestOrder = "MODIFY_PATIENT_SYMPTOME";
+    final String deletePatientSymptomeRequestOrder = "DELETE_PATIENT_SYMPTOME";
 
     private final NetworkConfig networkConfig;
 
@@ -79,6 +85,7 @@ public class ServiceSymptome {
         
         return symptome; 
     }
+    
     public void deleteSymptome(Symptomes symptome) throws InterruptedException, IOException {
         processSymptome(symptome, deleteRequestOrder);
     }
@@ -205,7 +212,7 @@ public class ServiceSymptome {
             return (List<Symptomes>) joinedSymptomeRequest.getResult();
         } else {
             logger.error("Aucun symptôme trouvé !");
-            return null;
+            return new ArrayList<>(); 
         }
     }
 
@@ -216,7 +223,7 @@ public class ServiceSymptome {
         final String requestId = UUID.randomUUID().toString();
         final Request request = new Request();
         request.setRequestId(requestId);
-        request.setRequestOrder("DIAGNOSTIC_PATIENT");
+        request.setRequestOrder(diagnosticPatientRequestOrder);
 
         String jsonifiedPatientId = objectMapper.writeValueAsString(idPatient);
         request.setRequestContent(jsonifiedPatientId);
@@ -240,5 +247,156 @@ public class ServiceSymptome {
             logger.error("Aucune maladie diagnostiquée !");
             return new ArrayList<>();
         }
+    }
+    
+    
+    public List<String> diagnostiquerPatient(int idPatient) throws InterruptedException, IOException {
+        return diagnostiquer(idPatient);
+    }
+    
+    public Symptomes associerSymptomePatient(int idPatient, Symptomes symptome) throws InterruptedException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        
+        ObjectNode dataNode = objectMapper.createObjectNode();
+        dataNode.put("id_patient", idPatient);
+        
+        if (symptome.getId() > 0) {
+            dataNode.put("id_symptome", symptome.getId());
+        } else {
+            dataNode.put("nom_symptome", symptome.getNom());
+        }
+        
+        final String requestId = UUID.randomUUID().toString();
+        final Request request = new Request();
+        request.setRequestId(requestId);
+        request.setRequestOrder(insertPatientSymptomeRequestOrder);
+        request.setRequestContent(objectMapper.writeValueAsString(dataNode));
+        
+        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+        
+        final InsertSymptomeClientRequest clientRequest = new InsertSymptomeClientRequest(
+                networkConfig, 0, request, symptome, requestBytes);
+        
+        clientRequest.join();
+        
+        logger.debug("Thread {} terminé : Symptôme associé au patient {}", 
+                clientRequest.getThreadName(), idPatient);
+        
+        return clientRequest.getResult();
+    }
+    
+   
+public String supprimerSymptomePatient(int idPatient, int idSymptome) throws InterruptedException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    
+    ObjectNode dataNode = objectMapper.createObjectNode();
+    dataNode.put("id_patient", idPatient);
+    dataNode.put("id_symptome", idSymptome);
+    
+    final String requestId = UUID.randomUUID().toString();
+    final Request request = new Request();
+    request.setRequestId(requestId);
+    request.setRequestOrder(deletePatientSymptomeRequestOrder);
+    request.setRequestContent(objectMapper.writeValueAsString(dataNode));
+    
+    objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+    
+    Symptomes symptome = new Symptomes();
+    symptome.setId(idSymptome);
+    
+    final DeleteSymptomeClientRequest clientRequest = new DeleteSymptomeClientRequest(
+            networkConfig, 0, request, symptome, requestBytes);
+    
+    clientRequest.join();
+    
+    String result = (String) clientRequest.getResult();
+    logger.debug("Thread {} terminé : Association supprimée pour patient {} et symptôme {} - Résultat: {}", 
+            clientRequest.getThreadName(), idPatient, idSymptome, result);
+    
+    return result;
+}
+    
+    
+    public List<Symptomes> getSymptomesPatient(int idPatient) throws InterruptedException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        
+        final String requestId = UUID.randomUUID().toString();
+        final Request request = new Request();
+        request.setRequestId(requestId);
+        request.setRequestOrder(selectPatientSymptomesRequestOrder);
+        
+        String jsonifiedId = objectMapper.writeValueAsString(idPatient);
+        request.setRequestContent(jsonifiedId);
+        
+        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+        
+        final SelectAllSymptomesClientRequest clientRequest = new SelectAllSymptomesClientRequest(
+                networkConfig, 0, request, null, requestBytes);
+        
+        try {
+            clientRequest.join();
+            
+            List<Symptomes> symptomes = (List<Symptomes>) clientRequest.getResult();
+            if (symptomes != null) {
+                logger.debug("Thread {} terminé : {} symptômes récupérés pour le patient {}", 
+                        clientRequest.getThreadName(), symptomes.size(), idPatient);
+                return symptomes;
+            } else {
+                logger.debug("Thread {} terminé : aucun symptôme trouvé pour le patient {}", 
+                        clientRequest.getThreadName(), idPatient);
+                return new ArrayList<>();
+            }
+        } catch (Exception e) {
+            logger.error("Erreur lors de la récupération des symptômes : {}", e.getMessage());
+            return new ArrayList<>(); 
+        }
+    }
+    
+   
+    public Symptomes modifierSymptomePatient(int idPatient, int idAncienSymptome, String nouveauNomSymptome) 
+            throws InterruptedException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        
+        List<Symptomes> tousLesSymptomes = selectSymptomes();
+        Symptomes symptomeExistant = null;
+        
+        for (Symptomes s : tousLesSymptomes) {
+            if (s.getNom().equals(nouveauNomSymptome)) {
+                symptomeExistant = s;
+                break;
+            }
+        }
+        
+        if (symptomeExistant == null) {
+            throw new IOException("Le symptôme '" + nouveauNomSymptome + "' n'existe pas dans la base de données.");
+        }
+        
+        ObjectNode dataNode = objectMapper.createObjectNode();
+        dataNode.put("id_patient", idPatient);
+        dataNode.put("id_ancien_symptome", idAncienSymptome);
+        dataNode.put("id_nouveau_symptome", symptomeExistant.getId()); 
+        
+        final String requestId = UUID.randomUUID().toString();
+        final Request request = new Request();
+        request.setRequestId(requestId);
+        request.setRequestOrder(modifyPatientSymptomeRequestOrder);
+        request.setRequestContent(objectMapper.writeValueAsString(dataNode));
+        
+        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+        
+        final UpdateSymptomeClientRequest clientRequest = new UpdateSymptomeClientRequest(
+                networkConfig, 0, request, symptomeExistant, requestBytes);
+        
+        clientRequest.join();
+        
+        String result = clientRequest.getResult();
+        logger.debug("Thread {} terminé : Symptôme {} modifié en {} pour le patient {}", 
+                clientRequest.getThreadName(), idAncienSymptome, symptomeExistant.getNom(), idPatient);
+        
+        return symptomeExistant;
     }
 }

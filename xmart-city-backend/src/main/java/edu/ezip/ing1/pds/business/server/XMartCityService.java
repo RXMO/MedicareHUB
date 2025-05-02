@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import edu.ezip.ing1.pds.business.dto.Medecin;
@@ -59,7 +60,6 @@ public class XMartCityService {
                         "JOIN medicament m ON p.id_medicament = m.id_medicament " +
                         "WHERE p.id_ordonnance = ?"),
         
-        // Requêtes pour les symptômes et diagnostic
         SELECT_ALL_SYMPTOMES("SELECT id_symptome, description FROM symptomes"),
         INSERT_SYMPTOME("INSERT INTO symptomes (description) VALUES (?)"),
         DELETE_SYMPTOME("DELETE FROM symptomes WHERE id_symptome = ?"),
@@ -74,7 +74,15 @@ public class XMartCityService {
                         "JOIN symptomes_maladies ON maladies.id_maladie = symptomes_maladies.id_maladie "
                         + "JOIN symptomes ON symptomes_maladies.id_symptome = symptomes.id_symptome " +
                         "JOIN patients_symptomes ON symptomes.id_symptome = patients_symptomes.id_symptome " +
-                        "WHERE patients_symptomes.id_patient = ?");
+                        "WHERE patients_symptomes.id_patient = ?"),
+        INSERT_PATIENT_SYMPTOME("INSERT INTO patients_symptomes (id_patient, id_symptome) VALUES (?, ?)"),
+        DELETE_PATIENT_SYMPTOME("DELETE FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?"),
+        SELECT_PATIENT_SYMPTOMES("SELECT s.id_symptome, s.description FROM symptomes s " +
+        "JOIN patients_symptomes ps ON s.id_symptome = ps.id_symptome " +
+        "WHERE ps.id_patient = ?"),
+        CHECK_PATIENT_SYMPTOME_EXISTS("SELECT COUNT(*) FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?"),
+        MODIFY_PATIENT_SYMPTOME("UPDATE patients_symptomes SET id_symptome = ? WHERE id_patient = ? AND id_symptome = ?"),
+        CHECK_SYMPTOME_EXISTS("SELECT id_symptome FROM symptomes WHERE description = ?");
 
         private final String query;
 
@@ -156,6 +164,18 @@ public class XMartCityService {
                 break;
             case RECHERCHER_MALADIES_PAR_SYMPTOME:
                 response = rechercherMaladiesParSymptome(request, connection);
+                break;
+            case INSERT_PATIENT_SYMPTOME:
+                response = InsertPatientSymptome(request, connection);
+                break;
+            case DELETE_PATIENT_SYMPTOME:
+                response = DeletePatientSymptome(request, connection);
+                break;
+            case SELECT_PATIENT_SYMPTOMES:
+                response = SelectPatientSymptomes(request, connection);
+                break;
+            case MODIFY_PATIENT_SYMPTOME:
+                response = ModifyPatientSymptome(request, connection);
                 break;
             default:
                 break;
@@ -466,7 +486,6 @@ public class XMartCityService {
             pstmt.setString(1, symptome.getNom());
             int rowsAffected = pstmt.executeUpdate();
 
-            // Récupérer l'ID généré
             int newId = 0;
             try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
@@ -478,7 +497,6 @@ public class XMartCityService {
 
             System.out.println("Résultat de l'insertion: " + rowsAffected + " ligne(s) affectée(s)");
 
-            // Retourne l'objet symptôme avec l'ID
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(symptome));
         }
     }
@@ -514,7 +532,6 @@ public class XMartCityService {
 
         try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_SYMPTOME.query)) {
            
-           // Utiliser l'ID pour la suppression
             pstmt.setInt(1, symptome.getId());  
             int rowsAffected = pstmt.executeUpdate();
             
@@ -568,4 +585,274 @@ public class XMartCityService {
                     maladies.isEmpty() ? "Aucune maladie trouvée" : objectMapper.writeValueAsString(maladies));
         }
     }
+
+    private Response InsertPatientSymptome(final Request request, final Connection connection)
+        throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode data = objectMapper.readTree(request.getRequestBody());
+        int idPatient = data.get("id_patient").asInt();
+        
+        int idSymptome = -1;
+        String nomSymptome = null;
+        
+        if (data.has("id_symptome")) {
+            idSymptome = data.get("id_symptome").asInt();
+        } else if (data.has("nom_symptome")) {
+            nomSymptome = data.get("nom_symptome").asText();
+        }
+        
+        System.out.println("Tentative d'association du symptôme au patient " + idPatient);
+        
+        connection.setAutoCommit(false); 
+        
+        try {
+            if (nomSymptome != null && idSymptome == -1) {
+                try (PreparedStatement pstmt = connection.prepareStatement(Queries.CHECK_SYMPTOME_EXISTS.query)) {
+                    pstmt.setString(1, nomSymptome);
+                    ResultSet rs = pstmt.executeQuery();
+                    
+                    if (rs.next()) {
+                        idSymptome = rs.getInt("id_symptome");
+                    } else {
+                        try (PreparedStatement insertStmt = connection.prepareStatement(Queries.INSERT_SYMPTOME.query, Statement.RETURN_GENERATED_KEYS)) {
+                            insertStmt.setString(1, nomSymptome);
+                            insertStmt.executeUpdate();
+                            
+                            ResultSet generatedKeys = insertStmt.getGeneratedKeys();
+                            if (generatedKeys.next()) {
+                                idSymptome = generatedKeys.getInt(1);
+                            } else {
+                                throw new SQLException("Création du symptôme échouée, aucun ID généré");
+                            }
+                        }
+                    }
+                }
+            }
+            
+            boolean associationExiste = false;
+            try (PreparedStatement checkStmt = connection.prepareStatement(Queries.CHECK_PATIENT_SYMPTOME_EXISTS.query)) {
+                checkStmt.setInt(1, idPatient);
+                checkStmt.setInt(2, idSymptome);
+                ResultSet rs = checkStmt.executeQuery();
+                
+                if (rs.next()) {
+                    associationExiste = rs.getInt(1) > 0;
+                }
+            }
+            
+            if (!associationExiste) {
+                try (PreparedStatement insertStmt = connection.prepareStatement(Queries.INSERT_PATIENT_SYMPTOME.query)) {
+                    insertStmt.setInt(1, idPatient);
+                    insertStmt.setInt(2, idSymptome);
+                    insertStmt.executeUpdate();
+                }
+            }
+            
+            connection.commit();
+            
+            Symptomes symptome = new Symptomes();
+            try (PreparedStatement pstmt = connection.prepareStatement("SELECT id_symptome, description FROM symptomes WHERE id_symptome = ?")) {
+                pstmt.setInt(1, idSymptome);
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    symptome.setId(rs.getInt("id_symptome"));
+                    symptome.setNom(rs.getString("description"));
+                }
+            }
+            
+            return new Response(request.getRequestId(), objectMapper.writeValueAsString(symptome));
+        } catch (SQLException e) {
+            connection.rollback();
+            System.err.println("Erreur lors de l'association: " + e.getMessage());
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    private Response DeletePatientSymptome(final Request request, final Connection connection)
+throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode data = objectMapper.readTree(request.getRequestBody());
+    int idPatient = data.get("id_patient").asInt();
+    int idSymptome = data.get("id_symptome").asInt();
+    
+    System.out.println("Tentative de suppression de l'association du symptôme " + idSymptome + " avec le patient " + idPatient);
+    
+    connection.setAutoCommit(false);
+    
+    try {
+        boolean symptomeUtiliseParAutres = false;
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "SELECT COUNT(*) FROM patients_symptomes WHERE id_symptome = ? AND id_patient != ?")) {
+            pstmt.setInt(1, idSymptome);
+            pstmt.setInt(2, idPatient);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next() && rs.getInt(1) > 0) {
+                symptomeUtiliseParAutres = true;
+                System.out.println("Le symptôme est utilisé par d'autres patients : " + symptomeUtiliseParAutres);
+            }
+        }
+        
+        int rowsAffected = 0;
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "DELETE FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?")) {
+            pstmt.setInt(1, idPatient);
+            pstmt.setInt(2, idSymptome);
+            rowsAffected = pstmt.executeUpdate();
+            
+            if (rowsAffected == 0) {
+                connection.rollback();
+                return new Response(request.getRequestId(), 
+                    "{\"message\": \"Aucune association trouvée pour ce patient et ce symptôme\"}");
+            }
+            
+            System.out.println("Association patient-symptôme supprimée : " + rowsAffected + " ligne(s) affectée(s)");
+        }
+        
+        if (!symptomeUtiliseParAutres) {
+            try {
+               
+                boolean symptomeDansMaladies = false;
+                try (PreparedStatement pstmt = connection.prepareStatement(
+                        "SELECT EXISTS(SELECT 1 FROM symptomes_maladies WHERE id_symptome = ?)")) {
+                    pstmt.setInt(1, idSymptome);
+                    ResultSet rs = pstmt.executeQuery();
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        symptomeDansMaladies = true;
+                    }
+                }
+                
+                if (!symptomeDansMaladies) {
+                    try (PreparedStatement pstmt = connection.prepareStatement(
+                            "DELETE FROM symptomes WHERE id_symptome = ?")) {
+                        pstmt.setInt(1, idSymptome);
+                        int symptomesDeleted = pstmt.executeUpdate();
+                        
+                        if (symptomesDeleted > 0) {
+                            System.out.println("Symptôme supprimé de la table symptomes : " + symptomesDeleted + " ligne(s) affectée(s)");
+                        }
+                    }
+                } else {
+                    System.out.println("Le symptôme est référencé dans symptomes_maladies, impossible de le supprimer");
+                }
+            } catch (SQLException e) {
+                System.out.println("Erreur lors de la tentative de suppression du symptôme: " + e.getMessage());
+                
+            }
+        }
+        
+        connection.commit();
+        return new Response(request.getRequestId(), 
+            "{\"message\": \"Association symptôme-patient supprimée avec succès\"}");
+    } catch (SQLException e) {
+        connection.rollback();
+        System.err.println("Erreur lors de la suppression: " + e.getMessage());
+        throw e;
+    } finally {
+        connection.setAutoCommit(true);
+    }
+}
+    private Response SelectPatientSymptomes(final Request request, final Connection connection)
+        throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
+        
+        System.out.println("Recherche des symptômes du patient " + idPatient);
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PATIENT_SYMPTOMES.query)) {
+            pstmt.setInt(1, idPatient);
+            ResultSet res = pstmt.executeQuery();
+            
+            List<Symptomes> symptomes = new ArrayList<>();
+            while (res.next()) {
+                Symptomes symptome = new Symptomes();
+                symptome.setId(res.getInt("id_symptome"));
+                symptome.setNom(res.getString("description"));
+                symptomes.add(symptome);
+            }
+            
+            System.out.println("Nombre de symptômes trouvés pour le patient: " + symptomes.size());
+            
+            return new Response(request.getRequestId(),
+                    symptomes.isEmpty() ? "{\"message\": \"Aucun symptôme trouvé pour ce patient\"}"
+                            : objectMapper.writeValueAsString(symptomes));
+        }
+    }
+    
+   
+    private Response ModifyPatientSymptome(final Request request, final Connection connection)
+    throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode data = objectMapper.readTree(request.getRequestBody());
+    int idPatient = data.get("id_patient").asInt();
+    int idAncienSymptome = data.get("id_ancien_symptome").asInt();
+    int idNouveauSymptome = data.get("id_nouveau_symptome").asInt();
+    
+    System.out.println("Tentative de modification du symptôme " + idAncienSymptome + 
+        " vers le symptôme avec ID " + idNouveauSymptome + " pour le patient " + idPatient);
+    
+    connection.setAutoCommit(false);
+    
+    try {
+        boolean symptomeDejaAssigne = false;
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "SELECT * FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?")) {
+            pstmt.setInt(1, idPatient);
+            pstmt.setInt(2, idNouveauSymptome);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                symptomeDejaAssigne = true;
+            }
+        }
+        
+        if (symptomeDejaAssigne) {
+            try (PreparedStatement pstmt = connection.prepareStatement(
+                    "DELETE FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?")) {
+                pstmt.setInt(1, idPatient);
+                pstmt.setInt(2, idAncienSymptome);
+                pstmt.executeUpdate();
+            }
+        } else {
+            try (PreparedStatement pstmt = connection.prepareStatement(
+                    "UPDATE patients_symptomes SET id_symptome = ? WHERE id_patient = ? AND id_symptome = ?")) {
+                pstmt.setInt(1, idNouveauSymptome);
+                pstmt.setInt(2, idPatient);
+                pstmt.setInt(3, idAncienSymptome);
+                int rowsUpdated = pstmt.executeUpdate();
+                
+                if (rowsUpdated == 0) {
+                    try (PreparedStatement insertStmt = connection.prepareStatement(
+                            "INSERT INTO patients_symptomes (id_patient, id_symptome) VALUES (?, ?)")) {
+                        insertStmt.setInt(1, idPatient);
+                        insertStmt.setInt(2, idNouveauSymptome);
+                        insertStmt.executeUpdate();
+                    }
+                }
+            }
+        }
+        
+        connection.commit();
+        
+        Symptomes nouveauSymptome = new Symptomes();
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT id_symptome, description FROM symptomes WHERE id_symptome = ?")) {
+            pstmt.setInt(1, idNouveauSymptome);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                nouveauSymptome.setId(rs.getInt("id_symptome"));
+                nouveauSymptome.setNom(rs.getString("description"));
+            }
+        }
+        
+        return new Response(request.getRequestId(), objectMapper.writeValueAsString(nouveauSymptome));
+    } catch (SQLException e) {
+        connection.rollback();
+        System.err.println("Erreur lors de la modification: " + e.getMessage());
+        throw e;
+    } finally {
+        connection.setAutoCommit(true);
+    }
+}
 }

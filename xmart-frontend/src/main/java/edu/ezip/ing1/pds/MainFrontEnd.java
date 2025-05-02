@@ -121,7 +121,7 @@ public class MainFrontEnd {
         // ActionListener pour le bouton Afrah (Diagnostic)
         btnAfrah.addActionListener(e -> {
              FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
-             fenetreDiagnostic.setVisible(true); // Affiche la fenêtre directement ici
+             fenetreDiagnostic.setVisible(true); // 
              fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
         });
 

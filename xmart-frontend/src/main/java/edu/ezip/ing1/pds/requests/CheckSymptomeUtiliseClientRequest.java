@@ -28,3 +28,4 @@ public class CheckSymptomeUtiliseClientRequest extends ClientRequest<Integer, Bo
         }
     }
 }
+//

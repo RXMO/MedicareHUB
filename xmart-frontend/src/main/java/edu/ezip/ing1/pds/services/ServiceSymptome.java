@@ -400,3 +400,4 @@ public String supprimerSymptomePatient(int idPatient, int idSymptome) throws Int
         return symptomeExistant;
     }
 }
+//

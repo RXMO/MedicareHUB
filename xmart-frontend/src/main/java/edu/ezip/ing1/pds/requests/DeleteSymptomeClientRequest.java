@@ -10,6 +10,7 @@ import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
 
+// SUPPRIMER UN SYMPTÔME DE LA BASE DE DONNÉES
 public class DeleteSymptomeClientRequest extends ClientRequest<Symptomes, String> {
 
     public DeleteSymptomeClientRequest(
@@ -24,13 +25,14 @@ public class DeleteSymptomeClientRequest extends ClientRequest<Symptomes, String
             final ObjectMapper mapper = new ObjectMapper();
             Map<String, Object> responseMap = mapper.readValue(body, Map.class);
             
+            // EXTRACTION DU MESSAGE DE RÉPONSE S'IL EXISTE
             if (responseMap.containsKey("message")) {
                 return responseMap.get("message").toString();
             } else {
-                return body;
+                return body; 
             }
         } catch (Exception e) {
-            return body;
+            return body; // EN CAS D'ERREUR, RETOURNE LA RÉPONSE BRUTE
         }
     }
 }

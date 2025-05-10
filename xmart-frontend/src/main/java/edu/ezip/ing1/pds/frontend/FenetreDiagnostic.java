@@ -1,12 +1,17 @@
 package edu.ezip.ing1.pds.frontend;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -17,37 +22,51 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import edu.ezip.ing1.pds.business.dto.DiagnosticResult;
 import edu.ezip.ing1.pds.business.dto.Symptomes;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.services.ServiceSymptome;
 
 public class FenetreDiagnostic extends JFrame {
 
-    private JTextField champSymptome;
-    private JTextField champModification;
-    private JTextField champPatientId;  
+    // CHAMPS DE TEXTE POUR LA SAISIE DES INFORMATIONS
+    private JTextField champSymptome;             //  NOM DU SYMPTÔME
+    private JTextField champModification;         //  MODIFIER UN SYMPTÔME
+    private JTextField champPatientId;            // SAISIE DE L'ID DU PATIENT
+    private JTextField champDateRendezVous;       // LA DATE DU RENDEZ-VOUS
 
-    private DefaultListModel<String> modeleListe;
-    private JList<String> listeSymptomes;
-    private JTextArea resultatDiagnostic;
+    // AFFICHAGE DES DONNÉES
+    private DefaultListModel<String> modelList;   
+    private JList<String> listeSymptomes;         // LISTE DES SYMPTÔMES AFFICHÉS
+    private JTextArea resultatDiagnostic;        
 
-    private JButton boutonAjouter, boutonAfficher, boutonModifier, boutonSupprimer, boutonDiagnostiquer;
+    // BOUTONS DE L'INTERFACE
+    private JButton boutonAjouter;                
+    private JButton boutonAfficher;              
+    private JButton boutonModifier;               
+    private JButton boutonSupprimer;              
+    private JButton boutonDiagnostiquer;         
+    private JButton boutonPrendreRendezVous;      
 
-    private ServiceSymptome serviceSymptome;
+    private ServiceSymptome serviceSymptome;     
     
-    private List<Symptomes> symptomesAjoutes = new ArrayList<>();
+    private List<Symptomes> symptomesAjoutes = new ArrayList<>();  
+    private List<DiagnosticResult> derniersResultats;              // RÉSULTATS DU DERNIER DIAGNOSTIC
     
-    private int idPatientActuel = 1; 
+    private int idPatientActuel = 1;             
+    private Map<Integer, JComboBox<String>> creneauxComboBoxes = new HashMap<>();  // MENUS DÉROULANTS POUR CRÉNEAUX
+    private Map<Integer, Map<String, Map<String, Object>>> creneauxMap = new HashMap<>();  
 
+    // INITIALISATION DE L'INTERFACE ET CONNEXION AU SERVEUR
     public FenetreDiagnostic() {
         NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setIpaddress("172.31.252.216");
-        networkConfig.setTcpport(45065);
+        networkConfig.setTcpport(45065);                     
 
         serviceSymptome = new ServiceSymptome(networkConfig);
 
         setTitle("Diagnostic Médical");
         setSize(800, 500);
+        setMinimumSize(new Dimension(600, 500)); 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -55,18 +74,25 @@ public class FenetreDiagnostic extends JFrame {
         champPatientId = new JTextField(5);
         champPatientId.setText(String.valueOf(idPatientActuel));
         JButton boutonChargerPatient = new JButton("Charger Patient");
+        boutonChargerPatient.setPreferredSize(new Dimension(130, 30)); 
         
-        panelPatient.add(new JLabel("ID Patient :"));
+        panelPatient.add(new JLabel("ID Patient:"));
         panelPatient.add(champPatientId);
         panelPatient.add(boutonChargerPatient);
         add(panelPatient, BorderLayout.NORTH);
 
+        // AJOUT DE SYMPTÔMES
         JPanel panelHaut = new JPanel();
-        champSymptome = new JTextField(20);
+        panelHaut.setLayout(new BoxLayout(panelHaut, BoxLayout.X_AXIS));
+        champSymptome = new JTextField(8);
         boutonAjouter = new JButton("Ajouter");
         boutonAfficher = new JButton("Afficher");
 
-        panelHaut.add(new JLabel("Symptôme :"));
+        champSymptome.setMaximumSize(new Dimension(150, 30));
+        boutonAjouter.setPreferredSize(new Dimension(120, 40));
+        boutonAfficher.setPreferredSize(new Dimension(120, 40));
+
+        panelHaut.add(new JLabel("Symptôme:"));
         panelHaut.add(champSymptome);
         panelHaut.add(boutonAjouter);
         panelHaut.add(boutonAfficher);
@@ -74,53 +100,74 @@ public class FenetreDiagnostic extends JFrame {
         JPanel panelCentre = new JPanel(new BorderLayout());
         panelCentre.add(panelHaut, BorderLayout.NORTH);
         
-        modeleListe = new DefaultListModel<>();
-        listeSymptomes = new JList<>(modeleListe);
+        modelList = new DefaultListModel<>();
+        listeSymptomes = new JList<>(modelList);
         JScrollPane scrollPane = new JScrollPane(listeSymptomes);
         panelCentre.add(scrollPane, BorderLayout.CENTER);
         
         add(panelCentre, BorderLayout.CENTER);
 
+        // MODIFICATION ET SUPPRESSION DE SYMPTÔMES
         JPanel panelBas = new JPanel();
         champModification = new JTextField(15);
         boutonModifier = new JButton("Modifier");
         boutonSupprimer = new JButton("Supprimer");
 
-        panelBas.add(new JLabel("Modifier le symptôme sélectionné :"));
+        boutonModifier.setPreferredSize(new Dimension(100, 30));
+        boutonSupprimer.setPreferredSize(new Dimension(100, 30));
+
+        panelBas.add(new JLabel("Modifier le symptôme sélectionné:"));
         panelBas.add(champModification);
         panelBas.add(boutonModifier);
         panelBas.add(boutonSupprimer);
         add(panelBas, BorderLayout.SOUTH);
 
+        //  DIAGNOSTIC ET RENDEZ-VOUS
         JPanel panelDroite = new JPanel(new BorderLayout());
         boutonDiagnostiquer = new JButton("Diagnostiquer");
         resultatDiagnostic = new JTextArea(10, 20);
         resultatDiagnostic.setEditable(false);
+
+        boutonDiagnostiquer.setPreferredSize(new Dimension(150, 30));
+
+        JPanel panelRendezVous = new JPanel(new FlowLayout());
+        champDateRendezVous = new JTextField(10);
+        boutonPrendreRendezVous = new JButton("Prendre Rendez-vous");
+        boutonPrendreRendezVous.setPreferredSize(new Dimension(150, 30));
+
+        panelRendezVous.add(new JLabel("Date (AAAA-MM-JJ):"));
+        panelRendezVous.add(champDateRendezVous);
+        panelRendezVous.add(boutonPrendreRendezVous);
+
         panelDroite.add(boutonDiagnostiquer, BorderLayout.NORTH);
         panelDroite.add(new JScrollPane(resultatDiagnostic), BorderLayout.CENTER);
+        panelDroite.add(panelRendezVous, BorderLayout.SOUTH);
         add(panelDroite, BorderLayout.EAST);
 
+        // ÉCOUTEURS D'ÉVÉNEMENTS
         boutonAjouter.addActionListener(e -> ajouterSymptome());
         boutonAfficher.addActionListener(e -> afficherSymptomes());
         boutonModifier.addActionListener(e -> modifierSymptome());
         boutonSupprimer.addActionListener(e -> supprimerSymptome());
         boutonDiagnostiquer.addActionListener(e -> diagnostiquer());
         boutonChargerPatient.addActionListener(e -> chargerPatient());
-        
+        boutonPrendreRendezVous.addActionListener(e -> prendreRendezVous());
+
         chargerSymptomesPatient();
     }
-    
+
+    // CHARGEMENT DES DONNÉES D'UN PATIENT PAR SON ID
     private void chargerPatient() {
         try {
             String idText = champPatientId.getText().trim();
             if (idText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Veuillez entrer un ID de patient valide", "Erreur", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Veuillez saisir un ID patient valide", "Erreur", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
             int newPatientId = Integer.parseInt(idText);
             if (newPatientId <= 0) {
-                JOptionPane.showMessageDialog(this, "L'ID du patient doit être un entier positif", "Erreur", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "L'ID patient doit être un entier positif", "Erreur", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             
@@ -130,17 +177,16 @@ public class FenetreDiagnostic extends JFrame {
             
             JOptionPane.showMessageDialog(this, "Patient " + idPatientActuel + " chargé avec succès", "Succès", JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "L'ID du patient doit être un nombre entier", "Erreur", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "L'ID patient doit être un nombre entier", "Erreur", JOptionPane.ERROR_MESSAGE);
         }
     }
     
+    // RÉCUPÉRATION DES SYMPTÔMES DU PATIENT
     private void chargerSymptomesPatient() {
         try {
-            symptomesAjoutes.clear(); 
-            
+            symptomesAjoutes.clear();
             List<Symptomes> symptomesPatient = serviceSymptome.getSymptomesPatient(idPatientActuel);
             symptomesAjoutes.addAll(symptomesPatient);
-            
             afficherSymptomes();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -150,37 +196,45 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
 
+    // AJOUT D'UN NOUVEAU SYMPTÔME AU PATIENT
     private void ajouterSymptome() {
-        String symptomeTexte = champSymptome.getText().trim();
+        String symptomText = champSymptome.getText().trim();
         
-        if (symptomeTexte.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Champ vide !", "Erreur", JOptionPane.ERROR_MESSAGE);
+        if (symptomText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Le champ est vide !", "Erreur", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
         try {
-            Symptomes symptome = new Symptomes(0, symptomeTexte);
-            
-            Symptomes symptomeAvecId = serviceSymptome.associerSymptomePatient(idPatientActuel, symptome);
+            Symptomes symptom = new Symptomes(0, symptomText);
+            Symptomes symptomWithId = serviceSymptome.associerSymptomePatient(idPatientActuel, symptom);
             champSymptome.setText("");
             
-            boolean existe = false;
+            if (symptomWithId == null) {
+                JOptionPane.showMessageDialog(this, 
+                    "Erreur : Impossible d'associer le symptôme au patient. Réponse du serveur non valide.", 
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            boolean exists = false;
             for (Symptomes s : symptomesAjoutes) {
-                if (s.getId() == symptomeAvecId.getId()) {
-                    existe = true;
+                if (s.getId() == symptomWithId.getId()) {
+                    exists = true;
                     break;
                 }
             }
             
-            if (!existe) {
-                symptomesAjoutes.add(symptomeAvecId);
+            if (!exists) {
+                symptomesAjoutes.add(symptomWithId);
             }
             
+            //afficherSymptomes(); 
+            
             JOptionPane.showMessageDialog(this, 
-                "Symptôme associé au patient avec succès ! ID: " + symptomeAvecId.getId(), 
+                "Symptôme associé au patient avec succès ! ID: " + symptomWithId.getId(), 
                 "Succès", JOptionPane.INFORMATION_MESSAGE);
             
-           //afficherSymptomes();
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, 
@@ -189,155 +243,224 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
     
+    // MISE À JOUR DE L'AFFICHAGE DES SYMPTÔMES DANS LA LISTE
     private void afficherSymptomes() {
-        modeleListe.clear();
+        modelList.clear();
         for (Symptomes s : symptomesAjoutes) {
-            modeleListe.addElement(s.getNom());
+            modelList.addElement(s.getDescription());
         }
     }
 
+    // MODIFICATION D'UN SYMPTÔME EXISTANT
     private void modifierSymptome() {
-    String symptomeSelectionne = listeSymptomes.getSelectedValue();
-    String nouveauNom = champModification.getText().trim();
+        String selectedSymptom = listeSymptomes.getSelectedValue();
+        String newName = champModification.getText().trim();
 
-    if (symptomeSelectionne == null || nouveauNom.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Champ vide ou symptôme non sélectionné !", "Erreur", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
+        if (selectedSymptom == null || newName.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Le champ est vide ou aucun symptôme n'est sélectionné !", "Erreur", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-    try {
-        int idSymptome = 0;
-        int index = -1;
-        for (int i = 0; i < symptomesAjoutes.size(); i++) {
-            Symptomes s = symptomesAjoutes.get(i);
-            if (s.getNom().equals(symptomeSelectionne)) {
-                idSymptome = s.getId();
-                index = i;
-                break;
+        try {
+            int symptomId = 0;
+            int index = -1;
+            for (int i = 0; i < symptomesAjoutes.size(); i++) {
+                Symptomes s = symptomesAjoutes.get(i);
+                if (s.getDescription().equals(selectedSymptom)) {
+                    symptomId = s.getId();
+                    index = i;
+                    break;
+                }
             }
-        }
-        
-        if (idSymptome == 0) {
-            JOptionPane.showMessageDialog(this, "Impossible de trouver l'ID du symptôme sélectionné.", "Erreur", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        List<Symptomes> tousLesSymptomes = serviceSymptome.selectSymptomes();
-        boolean symptomeExiste = false;
-        
-        for (Symptomes s : tousLesSymptomes) {
-            if (s.getNom().equals(nouveauNom)) {
-                symptomeExiste = true;
-                break;
+            
+            if (symptomId == 0) {
+                JOptionPane.showMessageDialog(this, "Impossible de trouver l'ID du symptôme sélectionné.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
             }
-        }
-        
-        if (!symptomeExiste) {
-            JOptionPane.showMessageDialog(this, 
-                "Le symptôme '" + nouveauNom + "' n'existe pas dans la base de données.\n" +
-                "Veuillez d'abord l'ajouter comme nouveau symptôme avant de l'utiliser pour la modification.",
-                "Symptôme introuvable", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        Symptomes nouveauSymptome = serviceSymptome.modifierSymptomePatient(idPatientActuel, idSymptome, nouveauNom);
-        champModification.setText("");
-        
-        if (index >= 0 && nouveauSymptome != null) {
-            symptomesAjoutes.remove(index);
-            symptomesAjoutes.add(nouveauSymptome);
-        } else {
-            chargerSymptomesPatient();
-        }
-        
-        afficherSymptomes();
-
-        JOptionPane.showMessageDialog(this, "Symptôme modifié avec succès !", "Succès", JOptionPane.INFORMATION_MESSAGE);
-    } catch (Exception ex) {
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, "Erreur: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
-    }
-}
-private void supprimerSymptome() {
-    String symptomeSelectionne = listeSymptomes.getSelectedValue();
-    if (symptomeSelectionne == null) {
-        JOptionPane.showMessageDialog(this, "Veuillez sélectionner un symptôme à supprimer.", "Attention", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-    
-    try {
-        int idSymptome = 0;
-        for (Symptomes s : symptomesAjoutes) {
-            if (s.getNom().equals(symptomeSelectionne)) {
-                idSymptome = s.getId();
-                break;
+            
+            List<Symptomes> allSymptoms = serviceSymptome.selectSymptomes();
+            boolean symptomExists = false;
+            
+            for (Symptomes s : allSymptoms) {
+                if (s.getDescription().equals(newName)) {
+                    symptomExists = true;
+                    break;
+                }
             }
-        }
-        
-        if (idSymptome == 0) {
-            JOptionPane.showMessageDialog(this, 
-                "Impossible de trouver l'ID du symptôme " + symptomeSelectionne, 
-                "Erreur", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
-        int confirmation = JOptionPane.showConfirmDialog(
-            this,
-            "Êtes-vous sûr de vouloir supprimer l'association avec le symptôme \"" + symptomeSelectionne + "\" ?",
-            "Confirmation de suppression",
-            JOptionPane.YES_NO_OPTION);
-        
-        if (confirmation != JOptionPane.YES_OPTION) {
-            return;
-        }
-        
-        String message = serviceSymptome.supprimerSymptomePatient(idPatientActuel, idSymptome);
-        
-        boolean supprime = false;
-        for (int i = 0; i < symptomesAjoutes.size(); i++) {
-            if (symptomesAjoutes.get(i).getId() == idSymptome) {
-                symptomesAjoutes.remove(i);
-                supprime = true;
-                break;
+            
+            if (!symptomExists) {
+                JOptionPane.showMessageDialog(this, 
+                    "Le symptôme '" + newName + "' n'existe pas dans la base de données.\n" +
+                    "Veuillez l'ajouter comme nouveau symptôme avant de l'utiliser pour la modification.",
+                    "Symptôme non trouvé", JOptionPane.WARNING_MESSAGE);
+                return;
             }
-        }
-        
-        if (!supprime) {
-            chargerSymptomesPatient();
-        } else {
+            
+            Symptomes newSymptom = serviceSymptome.modifierSymptomePatient(idPatientActuel, symptomId, newName);
+            champModification.setText("");
+            
+            if (index >= 0 && newSymptom != null) {
+                symptomesAjoutes.remove(index);
+                symptomesAjoutes.add(newSymptom);
+            } else {
+                chargerSymptomesPatient();
+            }
+            
             afficherSymptomes();
+
+            JOptionPane.showMessageDialog(this, "Symptôme modifié avec succès !", "Succès", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Erreur: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // SUPPRESSION D'UN SYMPTÔME DE LA LISTE DU PATIENT
+    private void supprimerSymptome() {
+        String selectedSymptom = listeSymptomes.getSelectedValue();
+        if (selectedSymptom == null) {
+            JOptionPane.showMessageDialog(this, "Veuillez sélectionner un symptôme à supprimer.", "Avertissement", JOptionPane.WARNING_MESSAGE);
+            return;
         }
         
-        JOptionPane.showMessageDialog(this, message, "Succès", JOptionPane.INFORMATION_MESSAGE);
-    } catch (Exception ex) {
-        ex.printStackTrace();
-        JOptionPane.showMessageDialog(this, 
-            "Erreur lors de la suppression: " + ex.getMessage(), 
-            "Erreur", JOptionPane.ERROR_MESSAGE);
+        try {
+            int symptomId = 0;
+            for (Symptomes s : symptomesAjoutes) {
+                if (s.getDescription().equals(selectedSymptom)) {
+                    symptomId = s.getId();
+                    break;
+                }
+            }
+            
+            if (symptomId == 0) {
+                JOptionPane.showMessageDialog(this, 
+                    "Impossible de trouver l'ID du symptôme " + selectedSymptom, 
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            int confirmation = JOptionPane.showConfirmDialog(
+                this,
+                "Êtes-vous sûr de vouloir supprimer l'association avec le symptôme \"" + selectedSymptom + "\" ?",
+                "Confirmation de suppression",
+                JOptionPane.YES_NO_OPTION);
+            
+            if (confirmation != JOptionPane.YES_OPTION) {
+                return;
+            }
+            
+            String message = serviceSymptome.supprimerSymptomePatient(idPatientActuel, symptomId);
+            
+            boolean deleted = false;
+            for (int i = 0; i < symptomesAjoutes.size(); i++) {
+                if (symptomesAjoutes.get(i).getId() == symptomId) {
+                    symptomesAjoutes.remove(i);
+                    deleted = true;
+                    break;
+                }
+            }
+            
+            if (!deleted) {
+                chargerSymptomesPatient();
+            } else {
+                afficherSymptomes();
+            }
+            
+            JOptionPane.showMessageDialog(this, message, "Succès", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, 
+                "Erreur lors de la suppression: " + ex.getMessage(), 
+                "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
     }
-}
 
+    // ANALYSE DES SYMPTÔMES POUR OBTENIR UN DIAGNOSTIC
     private void diagnostiquer() {
         try {
-            if (symptomesAjoutes.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Aucun symptôme ajouté pour ce patient.", "Attention", JOptionPane.WARNING_MESSAGE);
+            derniersResultats = serviceSymptome.diagnostiquer(idPatientActuel);
+            StringBuilder sb = new StringBuilder("Maladies possibles:\n");
+            creneauxComboBoxes.clear();
+            creneauxMap.clear();
+            if (derniersResultats.isEmpty()) {
+                sb.append("Aucune maladie trouvée pour ces symptômes.\n");
+            } else {
+                int diagnosticIndex = 0;
+                for (DiagnosticResult result : derniersResultats) {
+                    sb.append("- ").append(result.toString()).append("\n");
+                    List<Map<String, Object>> creneaux = result.getCreneauxDisponibles();
+                    if (creneaux != null && !creneaux.isEmpty()) {
+                        sb.append("  Créneaux disponibles:\n");
+                        Map<String, Map<String, Object>> creneauDetails = new HashMap<>();
+                        List<String> creneauOptions = new ArrayList<>();
+                        for (Map<String, Object> creneau : creneaux) {
+                            String creneauStr = String.format("%s de %s à %s (Médecin: %d)",
+                                    creneau.get("jour"), creneau.get("heure_debut"),
+                                    creneau.get("heure_fin"), creneau.get("id_medecin"));
+                            creneauOptions.add(creneauStr);
+                            creneauDetails.put(creneauStr, creneau);
+                        }
+                        creneauxMap.put(diagnosticIndex, creneauDetails);
+                        sb.append("    ").append(creneauOptions.get(0)).append("\n"); // AFFICHE LE PREMIER CRÉNEAU PAR DÉFAUT
+                    } else {
+                        sb.append("  Aucun créneau disponible pour cette spécialité.\n");
+                    }
+                    diagnosticIndex++;
+                }
+            }
+            resultatDiagnostic.setText(sb.toString());
+        } catch (Exception ex) {
+            resultatDiagnostic.setText("Erreur lors du diagnostic: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Erreur: " + ex.getMessage(), "Erreur de diagnostic", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ENREGISTREMENT D'UN RENDEZ-VOUS MÉDICAL
+    private void prendreRendezVous() {
+        try {
+            String appointmentDate = champDateRendezVous.getText().trim();
+            if (appointmentDate.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Veuillez saisir une date pour le rendez-vous (format AAAA-MM-JJ).", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (derniersResultats == null || derniersResultats.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Effectuez un diagnostic avant de prendre un rendez-vous.", "Erreur", JOptionPane.ERROR_MESSAGE);
                 return;
             }
     
-            List<String> maladies = serviceSymptome.diagnostiquer(idPatientActuel);
-            
-            if (maladies == null || maladies.isEmpty()) {
-                resultatDiagnostic.setText("Aucune maladie trouvée pour ces symptômes.");
-            } else {
-                StringBuilder sb = new StringBuilder("Maladies possibles selon les symptômes :\n");
-                for (String maladie : maladies) {
-                    sb.append("- ").append(maladie).append("\n");
-                }
-                resultatDiagnostic.setText(sb.toString());
+            // UTILISATION DU PREMIER DIAGNOSTIC POUR DÉTERMINER LA SPÉCIALITÉ
+            DiagnosticResult selectedDiagnostic = derniersResultats.get(0);
+            int specialtyId = selectedDiagnostic.getIdSpecialite();
+            if (specialtyId == 0) {
+                specialtyId = 1; 
             }
+    
+            // VÉRIFICATION DE LA DISPONIBILITÉ DES CRÉNEAUX
+            List<Map<String, Object>> creneaux = selectedDiagnostic.getCreneauxDisponibles();
+            if (creneaux == null || creneaux.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Aucun créneau disponible pour cette spécialité.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+    
+            // SÉLECTION DU PREMIER CRÉNEAU DISPONIBLE
+            Map<String, Object> selectedCreneau = creneaux.get(0);
+            int idDisponibilite = (int) selectedCreneau.get("id_disponibilite");
+            int idMedecin = (int) selectedCreneau.get("id_medecin");
+    
+            // ENVOI DE LA DEMANDE DE RENDEZ-VOUS AU SERVEUR
+            String message = serviceSymptome.creerRendezVous(idPatientActuel, appointmentDate, specialtyId, idDisponibilite, idMedecin);
+    
+            // VÉRIFICATION DU RÉSULTAT ET AFFICHAGE AU UTILISATEUR
+            if (message.toLowerCase().contains("erreur") || message.toLowerCase().contains("non disponible") || message.toLowerCase().contains("invalide")) {
+                JOptionPane.showMessageDialog(this, message, "Erreur lors de la prise de rendez-vous", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, message, "Succès", JOptionPane.INFORMATION_MESSAGE);
+            }
+    
+            // MISE À JOUR DES CRÉNEAUX DISPONIBLES APRÈS PRISE DU RENDEZ-VOUS
+            diagnostiquer();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            resultatDiagnostic.setText("Erreur lors du diagnostic: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Erreur lors de la prise de rendez-vous: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -345,4 +468,3 @@ private void supprimerSymptome() {
         SwingUtilities.invokeLater(() -> new FenetreDiagnostic().setVisible(true));
     }
 }
-//

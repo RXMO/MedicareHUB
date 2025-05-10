@@ -70,21 +70,19 @@ public class MainFrontEnd {
         // Déclaration des boutons
         JButton btnOmar = new JButton("Patients");
         JButton btnAfrah = new JButton("Diagnostic");
-        JButton btnEmna = new JButton("Ordonnances"); // Corrigé l'orthographe "Odonnances" → "Ordonnances"
-        JButton btnDoctor = new JButton("Médecins"); // Ajout du bouton Médecins
+        JButton btnEmna = new JButton("Ordonnances"); 
+        JButton btnDoctor = new JButton("Médecins"); 
 
         // ActionListener pour le bouton Ordonnances
         btnEmna.addActionListener(e -> {
             try {
-                // Charger la configuration réseau à partir du fichier "network.yaml"
                 NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, "network.yaml");
 
                 // Initialiser les services avec la configuration réseau
                 OrdonnanceService ordonnanceService = new OrdonnanceService(networkConfig);
                 MedicamentService medicamentService = new MedicamentService(networkConfig);
 
-                // Créer et afficher l'interface Ordonnance avec les services passés en
-                // paramètres
+                // Créer et afficher l'interface Ordonnance avec les services passés en paramètres
                 new OrdonnanceFrontEnd(ordonnanceService, medicamentService);
             } catch (InterruptedException | IOException ex) {
                 // Afficher un message d'erreur si une exception se produit
@@ -121,7 +119,7 @@ public class MainFrontEnd {
         // ActionListener pour le bouton Afrah (Diagnostic)
         btnAfrah.addActionListener(e -> {
              FenetreDiagnostic fenetreDiagnostic = new FenetreDiagnostic();
-             fenetreDiagnostic.setVisible(true); // 
+             fenetreDiagnostic.setVisible(true); 
              fenetreDiagnostic.setLocationRelativeTo(null); // Centre la fenêtre
         });
 

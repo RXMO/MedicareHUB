@@ -24,13 +24,16 @@ import edu.ezip.ing1.pds.commons.Request;
 import edu.ezip.ing1.pds.requests.DeletePatientSymptomeClientRequest;
 import edu.ezip.ing1.pds.requests.DeleteSymptomeClientRequest;
 import edu.ezip.ing1.pds.requests.DiagnostiquerClientRequest;
+import edu.ezip.ing1.pds.requests.InsertDiagnosticClientRequest;
 import edu.ezip.ing1.pds.requests.InsertPatientSymptomeClientRequest;
 import edu.ezip.ing1.pds.requests.InsertRendezVousClientRequest;
 import edu.ezip.ing1.pds.requests.InsertSymptomeClientRequest;
 import edu.ezip.ing1.pds.requests.ModifyPatientSymptomeClientRequest;
 import edu.ezip.ing1.pds.requests.SelectAllSymptomesClientRequest;
+import edu.ezip.ing1.pds.requests.SelectPatientDiagnosticsClientRequest;
 import edu.ezip.ing1.pds.requests.SelectPatientSymptomesClientRequest;
 import edu.ezip.ing1.pds.requests.UpdateSymptomeClientRequest;
+
 
 public class ServiceSymptome {
 
@@ -145,31 +148,66 @@ public class ServiceSymptome {
 
     //  diagnostic pour un patient en fonction de ses symptômes
     public List<DiagnosticResult> diagnostiquer(int idPatient) throws InterruptedException, IOException {
-        //  prépare la requête pour diagnostiquer un patient
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final String requestId = UUID.randomUUID().toString();
-        final Request request = new Request();
-        request.setRequestId(requestId);
-        request.setRequestOrder("DIAGNOSTIC_PATIENT");
-        request.setRequestContent(objectMapper.writeValueAsString(idPatient));
-        objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
-        final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final String requestId = UUID.randomUUID().toString();
+    final Request request = new Request();
+    request.setRequestId(requestId);
+    request.setRequestOrder("DIAGNOSTIC_PATIENT");
+    request.setRequestContent(objectMapper.writeValueAsString(idPatient));
+    objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
 
-        final DiagnostiquerClientRequest diagnostiqueRequest = new DiagnostiquerClientRequest(
-                networkConfig, 0, request, idPatient, requestBytes);
-        final Deque<ClientRequest> diagnostiqueRequests = new ArrayDeque<>();
-        diagnostiqueRequests.push(diagnostiqueRequest);
+    final DiagnostiquerClientRequest diagnostiqueRequest = new DiagnostiquerClientRequest(
+            networkConfig, 0, request, idPatient, requestBytes);
+    final Deque<ClientRequest> diagnostiqueRequests = new ArrayDeque<>();
+    diagnostiqueRequests.push(diagnostiqueRequest);
 
-        // attend la réponse et renvoie les résultats du diagnostic
-        if (!diagnostiqueRequests.isEmpty()) {
-            final ClientRequest joinedRequest = diagnostiqueRequests.pop();
-            joinedRequest.join();
-            logger.debug("Thread {} terminé.", joinedRequest.getThreadName());
-            List<DiagnosticResult> result = (List<DiagnosticResult>) joinedRequest.getResult();
-            return result != null ? result : new ArrayList<>();
-        }
-        return new ArrayList<>();
+    List<DiagnosticResult> resultats = new ArrayList<>();
+    if (!diagnostiqueRequests.isEmpty()) {
+        final ClientRequest joinedRequest = diagnostiqueRequests.pop();
+        joinedRequest.join();
+        logger.debug("Thread {} terminé.", joinedRequest.getThreadName());
+        resultats = (List<DiagnosticResult>) joinedRequest.getResult();
+        resultats = resultats != null ? resultats : new ArrayList<>();
     }
+
+    // Trie les résultats par score décroissant
+    resultats.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
+
+    // Limite les insertions aux 3 meilleurs diagnostics
+    int maxDiagnosticsToInsert = 3;
+    if (!resultats.isEmpty()) {
+        List<DiagnosticResult> topDiagnostics = resultats.subList(0, Math.min(maxDiagnosticsToInsert, resultats.size()));
+        for (DiagnosticResult result : topDiagnostics) {
+            final String insertRequestId = UUID.randomUUID().toString();
+            final Request insertRequest = new Request();
+            insertRequest.setRequestId(insertRequestId);
+            insertRequest.setRequestOrder("INSERT_DIAGNOSIS");
+            ObjectNode dataNode = objectMapper.createObjectNode();
+            dataNode.put("id_patient", idPatient);
+            dataNode.put("id_maladie", result.getId_maladie());
+            dataNode.put("score", result.getScore());
+            insertRequest.setRequestContent(objectMapper.writeValueAsString(dataNode));
+            objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+            final byte[] insertRequestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(insertRequest);
+
+            final InsertDiagnosticClientRequest insertDiagnosisRequest = new InsertDiagnosticClientRequest(
+                    networkConfig, 0, insertRequest, result, insertRequestBytes);
+            final Deque<ClientRequest> insertRequests = new ArrayDeque<>();
+            insertRequests.push(insertDiagnosisRequest);
+
+            if (!insertRequests.isEmpty()) {
+                final ClientRequest joinedInsertRequest = insertRequests.pop();
+                joinedInsertRequest.join();
+                logger.debug("Thread {} terminé : Diagnostic inséré pour id_maladie {}", 
+                        joinedInsertRequest.getThreadName(), result.getId_maladie());
+            }
+        }
+    }
+
+    // Retourne tous les résultats pour l'affichage dans l'interface
+    return resultats;
+}
 
     // crée un rendez-vous pour un patient
     public String creerRendezVous(int idPatient, String dateRendezVous, int idSpecialite, int idDisponibilite, int idMedecin) throws InterruptedException, IOException {
@@ -366,4 +404,31 @@ public class ServiceSymptome {
         }
         return null;
     }
+
+
+    public List<DiagnosticResult> getPatientDiagnostics(int idPatient) throws InterruptedException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    final String requestId = UUID.randomUUID().toString();
+    final Request request = new Request();
+    request.setRequestId(requestId);
+    request.setRequestOrder("SELECT_PATIENT_DIAGNOSTICS"); 
+    request.setRequestContent(objectMapper.writeValueAsString(idPatient));
+    objectMapper.enable(SerializationFeature.WRAP_ROOT_VALUE);
+    final byte[] requestBytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(request);
+
+    final SelectPatientDiagnosticsClientRequest clientRequest = new SelectPatientDiagnosticsClientRequest(
+            networkConfig, 0, request, idPatient, requestBytes); 
+    final Deque<ClientRequest> diagnosticRequests = new ArrayDeque<>();
+    diagnosticRequests.push(clientRequest);
+
+    if (!diagnosticRequests.isEmpty()) {
+        final ClientRequest joinedRequest = diagnosticRequests.pop();
+        joinedRequest.join();
+        List<DiagnosticResult> diagnostics = (List<DiagnosticResult>) joinedRequest.getResult();
+        logger.debug("Thread {} terminé : {} diagnostics récupérés pour le patient {}", 
+                joinedRequest.getThreadName(), diagnostics != null ? diagnostics.size() : 0, idPatient);
+        return diagnostics != null ? diagnostics : new ArrayList<>();
+    }
+    return new ArrayList<>();
+}
 }

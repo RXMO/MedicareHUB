@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import edu.ezip.ing1.pds.business.dto.DiagnosticResult;
 import edu.ezip.ing1.pds.business.dto.Medecin;
@@ -62,36 +64,44 @@ public class XMartCityService {
                 "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
                         "JOIN medicament m ON p.id_medicament = m.id_medicament " +
                         "WHERE p.id_ordonnance = ?"),
-                        
-                        
+
         SELECT_ALL_SYMPTOMES("SELECT id_symptome, description FROM symptomes"),
         INSERT_SYMPTOME("INSERT INTO symptomes (description) VALUES (?)"),
         DELETE_SYMPTOME("DELETE FROM symptomes WHERE id_symptome = ?"),
         UPDATE_SYMPTOME("UPDATE symptomes SET description = ? WHERE id_symptome = ?"),
         RECHERCHER_MALADIES_PAR_SYMPTOME(
-                            "SELECT DISTINCT maladies.nom_maladie FROM maladies " +
-                            "JOIN symptomes_maladies ON maladies.id_maladie = symptomes_maladies.id_maladie " +
-                            "JOIN symptomes ON symptomes_maladies.id_symptome = symptomes.id_symptome " +
-                            "WHERE symptomes.description = ?"),
+                "SELECT DISTINCT maladies.nom_maladie FROM maladies " +
+                        "JOIN symptomes_maladies ON maladies.id_maladie = symptomes_maladies.id_maladie " +
+                        "JOIN symptomes ON symptomes_maladies.id_symptome = symptomes.id_symptome " +
+                        "WHERE symptomes.description = ?"),
         SELECT_PATIENT_SYMPTOMES("SELECT s.id_symptome, s.description FROM symptomes s " +
-                            "JOIN patients_symptomes ps ON s.id_symptome = ps.id_symptome " +
-                            "WHERE ps.id_patient = ?"),
-        CHECK_PATIENT_SYMPTOME_EXISTS("SELECT COUNT(*) FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?"),
+                "JOIN patients_symptomes ps ON s.id_symptome = ps.id_symptome " +
+                "WHERE ps.id_patient = ?"),
+        CHECK_PATIENT_SYMPTOME_EXISTS(
+                "SELECT COUNT(*) FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?"),
         SELECT_SYMPTOME_BY_NAME("SELECT id_symptome FROM symptomes WHERE description = ?"),
         INSERT_PATIENT_SYMPTOME("INSERT INTO patients_symptomes (id_patient, id_symptome) VALUES (?, ?)"),
-        MODIFY_PATIENT_SYMPTOME("UPDATE patients_symptomes SET id_symptome = ? WHERE id_patient = ? AND id_symptome = ?"),
-        INSERT_RENDEZ_VOUS("INSERT INTO consultation (id_patient, id_medecin, id_disponibilite, heure_consultation) VALUES (?, ?, ?, ?)"),                        
+        MODIFY_PATIENT_SYMPTOME(
+                "UPDATE patients_symptomes SET id_symptome = ? WHERE id_patient = ? AND id_symptome = ?"),
+        INSERT_RENDEZ_VOUS(
+                "INSERT INTO consultation (id_patient, id_medecin, id_disponibilite, heure_consultation) VALUES (?, ?, ?, ?)"),
         SELECT_CRENEAU_DISPONIBLE("SELECT c.id_disponibilite, c.id_medecin, c.jour, c.heure_debut, c.heure_fin " +
-                            "FROM creneaux_disponibles c " +
-                            "JOIN medecins m ON c.id_medecin = m.id_medecin " +
-                            "WHERE m.id_specialite = ? AND c.disponible = true LIMIT 1"),
+                "FROM creneaux_disponibles c " +
+                "JOIN medecins m ON c.id_medecin = m.id_medecin " +
+                "WHERE m.id_specialite = ? AND c.disponible = true LIMIT 1"),
         UPDATE_CRENEAU_DISPONIBLE("UPDATE creneaux_disponibles SET disponible = false WHERE id_disponibilite = ?"),
         DIAGNOSTIC_PATIENT("SELECT s.id_symptome, s.description FROM symptomes s " +
-                            "JOIN patients_symptomes ps ON s.id_symptome = ps.id_symptome " +
-                            "WHERE ps.id_patient = ?"),
+                "JOIN patients_symptomes ps ON s.id_symptome = ps.id_symptome " +
+                "WHERE ps.id_patient = ?"),
         DELETE_PATIENT_SYMPTOME("DELETE FROM patients_symptomes WHERE id_patient = ? AND id_symptome = ?"),
-        SELECT_ALL_CRENEAUX_DISPONIBLES("SELECT id_disponibilite, jour, heure_debut, heure_fin, id_medecin, disponible FROM creneaux_disponibles WHERE disponible = true"),
-        SELECT_RENDEZ_VOUS_BY_PATIENT("SELECT c.id_consultation, c.id_patient, c.id_medecin, c.id_disponibilite, c.heure_consultation FROM consultation c WHERE c.id_patient = ?");
+        SELECT_ALL_CRENEAUX_DISPONIBLES(
+                "SELECT id_disponibilite, jour, heure_debut, heure_fin, id_medecin, disponible FROM creneaux_disponibles WHERE disponible = true"),
+        SELECT_RENDEZ_VOUS_BY_PATIENT(
+                "SELECT c.id_consultation, c.id_patient, c.id_medecin, c.id_disponibilite, c.heure_consultation FROM consultation c WHERE c.id_patient = ?"),
+        INSERT_DIAGNOSTIC(
+                "INSERT INTO patients_diagnostics (id_patient, id_maladie, score, date_diagnostic) VALUES (?, ?, ?, ?)"),
+        SELECT_PATIENT_DIAGNOSTICS("SELECT id_maladie, score, date_diagnostic FROM patients_diagnostics WHERE id_patient = ? ORDER BY date_diagnostic DESC");
+
         private final String query;
 
         private Queries(final String query) {
@@ -188,11 +198,17 @@ public class XMartCityService {
             case INSERT_RENDEZ_VOUS:
                 response = InsertRendezVous(request, connection);
                 break;
-                case SELECT_ALL_CRENEAUX_DISPONIBLES:
+            case SELECT_ALL_CRENEAUX_DISPONIBLES:
                 response = SelectAllCreneauxDisponibles(request, connection);
                 break;
             case SELECT_RENDEZ_VOUS_BY_PATIENT:
                 response = SelectRendezVousByPatient(request, connection);
+                break;
+            case INSERT_DIAGNOSTIC:
+                response = insertDiagnostic(request, connection);
+                break;
+            case SELECT_PATIENT_DIAGNOSTICS:
+                response = selectPatientDiagnostics(request, connection);
                 break;
             default:
                 break;
@@ -204,7 +220,7 @@ public class XMartCityService {
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
-             ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDECINS.query)) {
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDECINS.query)) {
             Medecins medecins = new Medecins();
             while (res.next()) {
                 Medecin medecin = new Medecin();
@@ -283,7 +299,7 @@ public class XMartCityService {
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
-             ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_PATIENTS.query)) {
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_PATIENTS.query)) {
             Patients patients = new Patients();
             while (res.next()) {
                 Patient patient = new Patient();
@@ -330,7 +346,7 @@ public class XMartCityService {
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
-             ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_ORDONNANCES.query)) {
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_ORDONNANCES.query)) {
             Ordonnances ordonnances = new Ordonnances();
             while (res.next()) {
                 Ordonnance ordonnance = new Ordonnance();
@@ -360,7 +376,8 @@ public class XMartCityService {
             pstmt.setInt(1, ordonnance.getIdOrdonnance());
             int rowsAffected = pstmt.executeUpdate();
             return new Response(request.getRequestId(),
-                    rowsAffected > 0 ? "Ordonnance supprimée avec succès" : "Aucune ordonnance trouvée pour suppression");
+                    rowsAffected > 0 ? "Ordonnance supprimée avec succès"
+                            : "Aucune ordonnance trouvée pour suppression");
         }
     }
 
@@ -403,7 +420,8 @@ public class XMartCityService {
             pstmt.setInt(5, ordonnance.getIdOrdonnance());
             int rowsAffected = pstmt.executeUpdate();
             return new Response(request.getRequestId(),
-                    rowsAffected > 0 ? "Ordonnance mise à jour avec succès" : "Aucune ordonnance trouvée pour mise à jour");
+                    rowsAffected > 0 ? "Ordonnance mise à jour avec succès"
+                            : "Aucune ordonnance trouvée pour mise à jour");
         }
     }
 
@@ -411,7 +429,7 @@ public class XMartCityService {
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
-             ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_MEDICAMENTS.query)) {
             Medicaments medicaments = new Medicaments();
             while (res.next()) {
                 Medicament medicament = new Medicament();
@@ -425,12 +443,13 @@ public class XMartCityService {
                             : objectMapper.writeValueAsString(medicaments));
         }
     }
-//récupérer tous les symptômes de la base
+
+    // récupérer tous les symptômes de la base
     private Response SelectAllSymptomes(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         try (Statement stmt = connection.createStatement();
-             ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_SYMPTOMES.query)) {
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_SYMPTOMES.query)) {
             List<Symptomes> symptomes = new ArrayList<>();
             while (res.next()) {
                 Symptomes symptome = new Symptomes();
@@ -443,7 +462,7 @@ public class XMartCityService {
                             : objectMapper.writeValueAsString(symptomes));
         }
     }
-// ajouter un nouveau symptôme 
+    // ajouter un nouveau symptôme
 
     private Response InsertSymptome(final Request request, final Connection connection)
             throws SQLException, IOException {
@@ -461,7 +480,8 @@ public class XMartCityService {
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(symptome));
         }
     }
-//modifier un symptome 
+
+    // modifier un symptome
     private Response UpdateSymptome(final Request request, final Connection connection)
             throws SQLException, IOException {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -475,7 +495,8 @@ public class XMartCityService {
                             : "{\"message\": \"Aucun symptôme trouvé pour mise à jour\"}");
         }
     }
-//supprimer un symptome
+
+    // supprimer un symptome
     private Response DeleteSymptome(final Request request, final Connection connection)
             throws SQLException, IOException {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -488,7 +509,8 @@ public class XMartCityService {
                             : "{\"message\": \"Aucun symptôme trouvé à supprimer\"}");
         }
     }
-// chercher les maladies liées a un symptome
+
+    // chercher les maladies liées a un symptome
     private Response rechercherMaladiesParSymptome(final Request request, final Connection connection)
             throws IOException {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -501,234 +523,260 @@ public class XMartCityService {
                 maladies.add(res.getString("nom_maladie"));
             }
         } catch (SQLException e) {
-            return new Response(request.getRequestId(), "{\"message\": \"Erreur lors de la recherche des maladies: " + e.getMessage() + "\"}");
+            return new Response(request.getRequestId(),
+                    "{\"message\": \"Erreur lors de la recherche des maladies: " + e.getMessage() + "\"}");
         }
         return new Response(request.getRequestId(),
                 maladies.isEmpty() ? "{\"message\": \"Aucune maladie trouvée\"}"
                         : objectMapper.writeValueAsString(maladies));
     }
-//diagnostiquer en f des symptomes 
+
+    // diagnostiquer en f des symptomes
     private Response DiagnostiquerPatient(final Request request, final Connection connection)
-        throws SQLException, JsonProcessingException, IOException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
-    List<Integer> symptomesPatient = new ArrayList<>();
+            throws SQLException, JsonProcessingException, IOException {
+        //récupère l’ID du patient depuis la requête
+        final ObjectMapper objectMapper = new ObjectMapper();
+        int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
+        List<Integer> symptomesPatient = new ArrayList<>();
 
-    // Récupérer les symptômes du patient
-    try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PATIENT_SYMPTOMES.query)) {
-        pstmt.setInt(1, idPatient);
-        ResultSet rs = pstmt.executeQuery();
-        while (rs.next()) {
-            symptomesPatient.add(rs.getInt("id_symptome"));
-        }
-    }
-    if (symptomesPatient.isEmpty()) {
-        return new Response(request.getRequestId(), "{\"message\": \"Aucun symptôme trouvé pour ce patient\"}");
-    }
-
-    // Récupérer les maladies et leurs symptômes associés et les spécialités
-    Map<Integer, String> maladiesMap = new HashMap<>();
-    Map<Integer, List<Integer>> symptomesMaladies = new HashMap<>();
-    Map<Integer, String> specialitesMap = new HashMap<>();
-    Map<Integer, Integer> idSpecialitesMap = new HashMap<>();
-    try (PreparedStatement pstmt = connection.prepareStatement(
-            "SELECT m.id_maladie, m.nom_maladie, sm.id_symptome, s.nom_specialite, s.id_specialite " +
-            "FROM maladies m " +
-            "JOIN symptomes_maladies sm ON m.id_maladie = sm.id_maladie " +
-            "LEFT JOIN specialites s ON m.id_specialite = s.id_specialite")) {
-        ResultSet rs = pstmt.executeQuery();
-        while (rs.next()) {
-            int idMaladie = rs.getInt("id_maladie");
-            maladiesMap.put(idMaladie, rs.getString("nom_maladie"));
-            symptomesMaladies.computeIfAbsent(idMaladie, k -> new ArrayList<>()).add(rs.getInt("id_symptome"));
-            specialitesMap.put(idMaladie, rs.getString("nom_specialite") != null ? rs.getString("nom_specialite") : "Généraliste");
-            int idSpecialite = rs.getInt("id_specialite");
-            if (!rs.wasNull()) {
-                idSpecialitesMap.put(idMaladie, idSpecialite);
-            } else {
-                idSpecialitesMap.put(idMaladie, 0); 
+        //récupère les symptômes du patient depuis la base de données
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PATIENT_SYMPTOMES.query)) {
+            pstmt.setInt(1, idPatient);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                symptomesPatient.add(rs.getInt("id_symptome"));
             }
         }
-    }
-
-    // Calculer les diagnostics avec score
-    List<DiagnosticResult> resultats = new ArrayList<>();
-    for (Map.Entry<Integer, List<Integer>> entry : symptomesMaladies.entrySet()) {
-        int idMaladie = entry.getKey();
-        List<Integer> symptomesMaladie = entry.getValue();
-        int correspondances = (int) symptomesMaladie.stream().filter(symptomesPatient::contains).count();
-        double score = (correspondances * 100.0) / symptomesMaladie.size();
-        if (score >= 50.0) {
-            DiagnosticResult result = new DiagnosticResult(
-                maladiesMap.get(idMaladie),
-                score,
-                correspondances,
-                symptomesMaladie.size(),
-                symptomesPatient.size(),
-                specialitesMap.get(idMaladie),
-                idSpecialitesMap.getOrDefault(idMaladie, 0),
-                score,
-                (correspondances * 100.0) / symptomesPatient.size()
-            );
-            resultats.add(result);
+        // Si le patient n’a pas de symptômes
+        if (symptomesPatient.isEmpty()) {
+            return new Response(request.getRequestId(), "{\"message\": \"Aucun symptôme trouvé pour ce patient\"}");
         }
-    }
-    resultats.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
 
-    // Récupérer les créneaux disponibles pour les spécialités associées
-    if (!resultats.isEmpty()) {
-        for (DiagnosticResult result : resultats) {
-            int idSpecialite = result.getIdSpecialite();
-            try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_ALL_CRENEAUX_DISPONIBLES.query)) {
-                // Filtrer les créneaux par spécialité via une jointure avec medecins
-                ResultSet creneauxRs = pstmt.executeQuery();
-                List<Map<String, Object>> creneaux = new ArrayList<>();
-                while (creneauxRs.next()) {
-                    int idMedecin = creneauxRs.getInt("id_medecin");
-                    try (PreparedStatement medecinStmt = connection.prepareStatement(
-                            "SELECT id_specialite FROM medecins WHERE id_medecin = ?")) {
-                        medecinStmt.setInt(1, idMedecin);
-                        ResultSet medecinRs = medecinStmt.executeQuery();
-                        if (medecinRs.next() && medecinRs.getInt("id_specialite") == idSpecialite) {
-                            Map<String, Object> creneau = new HashMap<>();
-                            creneau.put("id_disponibilite", creneauxRs.getInt("id_disponibilite"));
-                            creneau.put("jour", creneauxRs.getString("jour"));
-                            creneau.put("heure_debut", creneauxRs.getString("heure_debut"));
-                            creneau.put("heure_fin", creneauxRs.getString("heure_fin"));
-                            creneau.put("id_medecin", idMedecin);
-                            creneaux.add(creneau);
+        //récupère toutes les maladies leurs symptômes et leurs spécialités
+        Map<Integer, String> maladiesMap = new HashMap<>();
+        Map<Integer, List<Integer>> symptomesMaladies = new HashMap<>();
+        Map<Integer, String> specialitesMap = new HashMap<>();
+        Map<Integer, Integer> idSpecialitesMap = new HashMap<>();
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                "SELECT m.id_maladie, m.nom_maladie, sm.id_symptome, s.nom_specialite, s.id_specialite " +
+                        "FROM maladies m " +
+                        "JOIN symptomes_maladies sm ON m.id_maladie = sm.id_maladie " +
+                        "LEFT JOIN specialites s ON m.id_specialite = s.id_specialite")) {
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                int idMaladie = rs.getInt("id_maladie");
+                maladiesMap.put(idMaladie, rs.getString("nom_maladie"));
+                symptomesMaladies.computeIfAbsent(idMaladie, k -> new ArrayList<>()).add(rs.getInt("id_symptome"));
+                specialitesMap.put(idMaladie,
+                        rs.getString("nom_specialite") != null ? rs.getString("nom_specialite") : "Généraliste");
+                int idSpecialite = rs.getInt("id_specialite");
+                if (!rs.wasNull()) {
+                    idSpecialitesMap.put(idMaladie, idSpecialite);
+                } else {
+                    idSpecialitesMap.put(idMaladie, 0);
+                }
+            }
+        }
+
+        //calculer les diagnostics et leur score
+        List<DiagnosticResult> resultats = new ArrayList<>();
+        for (Map.Entry<Integer, List<Integer>> entry : symptomesMaladies.entrySet()) {
+            int idMaladie = entry.getKey();
+            List<Integer> symptomesMaladie = entry.getValue();
+            int correspondances = (int) symptomesMaladie.stream().filter(symptomesPatient::contains).count();
+            double score = (correspondances * 100.0) / symptomesMaladie.size();
+            if (score >= 50.0) {
+                DiagnosticResult result = new DiagnosticResult(
+                        maladiesMap.get(idMaladie),
+                        score,
+                        correspondances,
+                        symptomesMaladie.size(),
+                        symptomesPatient.size(),
+                        specialitesMap.get(idMaladie),
+                        idSpecialitesMap.getOrDefault(idMaladie, 0),
+                        score,
+                        (correspondances * 100.0) / symptomesPatient.size());
+                result.setId_maladie(idMaladie); 
+                resultats.add(result);
+            }
+        }
+        //trier les diagnostics par score du plus haut au plus bas
+        resultats.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
+
+        //insèrer chaque diagnostic dans la table patients_diagnostics
+        if (!resultats.isEmpty()) {
+            for (DiagnosticResult result : resultats) {
+                Request insertRequest = new Request();
+                insertRequest.setRequestId(UUID.randomUUID().toString());
+                insertRequest.setRequestOrder("INSERT_DIAGNOSIS");
+                ObjectNode dataNode = objectMapper.createObjectNode();
+                dataNode.put("id_patient", idPatient);
+                dataNode.put("id_maladie", result.getId_maladie()); 
+                dataNode.put("score", result.getScore());
+                insertRequest.setRequestContent(objectMapper.writeValueAsString(dataNode));
+                //insèrer le diagnostic dans la table
+                insertDiagnostic(insertRequest, connection);
+            }
+        }
+
+        //récupère les créneaux disponibles pour les spécialités associées
+        if (!resultats.isEmpty()) {
+            for (DiagnosticResult result : resultats) {
+                int idSpecialite = result.getIdSpecialite();
+                try (PreparedStatement pstmt = connection
+                        .prepareStatement(Queries.SELECT_ALL_CRENEAUX_DISPONIBLES.query)) {
+                    //filtrer les créneaux par spécialité via une jointure avec medecins
+                    ResultSet creneauxRs = pstmt.executeQuery();
+                    List<Map<String, Object>> creneaux = new ArrayList<>();
+                    while (creneauxRs.next()) {
+                        int idMedecin = creneauxRs.getInt("id_medecin");
+                        try (PreparedStatement medecinStmt = connection.prepareStatement(
+                                "SELECT id_specialite FROM medecins WHERE id_medecin = ?")) {
+                            medecinStmt.setInt(1, idMedecin);
+                            ResultSet medecinRs = medecinStmt.executeQuery();
+                            if (medecinRs.next() && medecinRs.getInt("id_specialite") == idSpecialite) {
+                                Map<String, Object> creneau = new HashMap<>();
+                                creneau.put("id_disponibilite", creneauxRs.getInt("id_disponibilite"));
+                                creneau.put("jour", creneauxRs.getString("jour"));
+                                creneau.put("heure_debut", creneauxRs.getString("heure_debut"));
+                                creneau.put("heure_fin", creneauxRs.getString("heure_fin"));
+                                creneau.put("id_medecin", idMedecin);
+                                creneaux.add(creneau);
+                            }
                         }
                     }
+                    result.setCreneauxDisponibles(creneaux);
                 }
-                result.setCreneauxDisponibles(creneaux); // Ajouter les créneaux au résultat
-            }
-        }
-    }
-
-    return new Response(request.getRequestId(),
-            resultats.isEmpty() ? "{\"message\": \"Aucune maladie correspondante trouvée\"}"
-                    : objectMapper.writeValueAsString(resultats));
-}
-
-private Response InsertRendezVous(final Request request, final Connection connection)
-        throws SQLException, IOException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-    JsonNode requestData = objectMapper.readTree(request.getRequestBody());
-    int idSpecialite = requestData.get("id_specialite").asInt();
-    String dateRendezVous = requestData.get("date_rendez_vous").asText();
-    int idPatient = requestData.get("id_patient").asInt();
-    int idDisponibilite = requestData.get("id_disponibilite").asInt();
-    int idMedecin = requestData.get("id_medecin").asInt();
-
-    // Activer une transaction pour éviter les conditions de concurrence
-    connection.setAutoCommit(false);
-    try {
-        // Vérifier que le créneau est disponible avec un verrouillage
-        String heureConsultation;
-        try (PreparedStatement creneauStmt = connection.prepareStatement(
-                "SELECT heure_debut FROM creneaux_disponibles WHERE id_disponibilite = ? AND id_medecin = ? AND disponible = TRUE FOR UPDATE")) {
-            creneauStmt.setInt(1, idDisponibilite);
-            creneauStmt.setInt(2, idMedecin);
-            ResultSet creneauRs = creneauStmt.executeQuery();
-
-            if (!creneauRs.next()) {
-                connection.rollback();
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Créneau non disponible ou invalide (ID: " + idDisponibilite + ", Médecin: " + idMedecin + ").");
-                return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
-            }
-            heureConsultation = creneauRs.getString("heure_debut");
-        }
-
-        // Marquer le créneau comme non disponible
-        try (PreparedStatement updateStmt = connection.prepareStatement(Queries.UPDATE_CRENEAU_DISPONIBLE.query)) {
-            updateStmt.setInt(1, idDisponibilite);
-            int rowsAffected = updateStmt.executeUpdate();
-            if (rowsAffected == 0) {
-                connection.rollback();
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Échec de la mise à jour de la disponibilité du créneau (ID: " + idDisponibilite + ").");
-                return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
             }
         }
 
-        // Insérer la consultation
-        try (PreparedStatement insertStmt = connection.prepareStatement(Queries.INSERT_RENDEZ_VOUS.query)) {
-            insertStmt.setInt(1, idPatient);
-            insertStmt.setInt(2, idMedecin);
-            insertStmt.setInt(3, idDisponibilite);
-            insertStmt.setString(4, heureConsultation);
-            int rowsAffected = insertStmt.executeUpdate();
-            if (rowsAffected == 0) {
-                connection.rollback();
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Échec de l'insertion de la consultation.");
-                return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
+        //renvoie les diagnostics au client
+        return new Response(request.getRequestId(),
+                resultats.isEmpty() ? "{\"message\": \"Aucune maladie correspondante trouvée\"}"
+                        : objectMapper.writeValueAsString(resultats));
+    }
+    private Response InsertRendezVous(final Request request, final Connection connection)
+            throws SQLException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode requestData = objectMapper.readTree(request.getRequestBody());
+        int idSpecialite = requestData.get("id_specialite").asInt();
+        String dateRendezVous = requestData.get("date_rendez_vous").asText();
+        int idPatient = requestData.get("id_patient").asInt();
+        int idDisponibilite = requestData.get("id_disponibilite").asInt();
+        int idMedecin = requestData.get("id_medecin").asInt();
+
+        // Activer une transaction pour éviter les conditions de concurrence
+        connection.setAutoCommit(false);
+        try {
+            // Vérifier que le créneau est disponible avec un verrouillage
+            String heureConsultation;
+            try (PreparedStatement creneauStmt = connection.prepareStatement(
+                    "SELECT heure_debut FROM creneaux_disponibles WHERE id_disponibilite = ? AND id_medecin = ? AND disponible = TRUE FOR UPDATE")) {
+                creneauStmt.setInt(1, idDisponibilite);
+                creneauStmt.setInt(2, idMedecin);
+                ResultSet creneauRs = creneauStmt.executeQuery();
+
+                if (!creneauRs.next()) {
+                    connection.rollback();
+                    Map<String, String> errorResponse = new HashMap<>();
+                    errorResponse.put("message", "Créneau non disponible ou invalide (ID: " + idDisponibilite
+                            + ", Médecin: " + idMedecin + ").");
+                    return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
+                }
+                heureConsultation = creneauRs.getString("heure_debut");
             }
+
+            // Marquer le créneau comme non disponible
+            try (PreparedStatement updateStmt = connection.prepareStatement(Queries.UPDATE_CRENEAU_DISPONIBLE.query)) {
+                updateStmt.setInt(1, idDisponibilite);
+                int rowsAffected = updateStmt.executeUpdate();
+                if (rowsAffected == 0) {
+                    connection.rollback();
+                    Map<String, String> errorResponse = new HashMap<>();
+                    errorResponse.put("message",
+                            "Échec de la mise à jour de la disponibilité du créneau (ID: " + idDisponibilite + ").");
+                    return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
+                }
+            }
+
+            // Insérer la consultation
+            try (PreparedStatement insertStmt = connection.prepareStatement(Queries.INSERT_RENDEZ_VOUS.query)) {
+                insertStmt.setInt(1, idPatient);
+                insertStmt.setInt(2, idMedecin);
+                insertStmt.setInt(3, idDisponibilite);
+                insertStmt.setString(4, heureConsultation);
+                int rowsAffected = insertStmt.executeUpdate();
+                if (rowsAffected == 0) {
+                    connection.rollback();
+                    Map<String, String> errorResponse = new HashMap<>();
+                    errorResponse.put("message", "Échec de l'insertion de la consultation.");
+                    return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
+                }
+            }
+
+            // Valider la transaction
+            connection.commit();
+            Map<String, String> responseBody = new HashMap<>();
+            responseBody.put("message", "Rendez-vous créé avec succès pour le patient " + idPatient +
+                    " avec le médecin " + idMedecin + " le " + dateRendezVous + " à " + heureConsultation);
+            return new Response(request.getRequestId(), objectMapper.writeValueAsString(responseBody));
+        } catch (SQLException e) {
+            connection.rollback();
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Erreur lors de la création du rendez-vous: " + e.getMessage());
+            return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
+        } finally {
+            connection.setAutoCommit(true);
         }
+    }
 
-        // Valider la transaction
-        connection.commit();
-        Map<String, String> responseBody = new HashMap<>();
-        responseBody.put("message", "Rendez-vous créé avec succès pour le patient " + idPatient +
-                " avec le médecin " + idMedecin + " le " + dateRendezVous + " à " + heureConsultation);
-        return new Response(request.getRequestId(), objectMapper.writeValueAsString(responseBody));
-    } catch (SQLException e) {
-        connection.rollback();
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("message", "Erreur lors de la création du rendez-vous: " + e.getMessage());
-        return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorResponse));
-    } finally {
-        connection.setAutoCommit(true);
+    // afficher les creneaux dispo
+    private Response SelectAllCreneauxDisponibles(final Request request, final Connection connection)
+            throws SQLException, JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        try (Statement stmt = connection.createStatement();
+                ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_CRENEAUX_DISPONIBLES.query)) {
+            List<Map<String, Object>> creneaux = new ArrayList<>();
+            while (res.next()) {
+                Map<String, Object> creneau = new HashMap<>();
+                creneau.put("id_disponibilite", res.getInt("id_disponibilite"));
+                creneau.put("jour", res.getString("jour"));
+                creneau.put("heure_debut", res.getString("heure_debut"));
+                creneau.put("heure_fin", res.getString("heure_fin"));
+                creneau.put("id_medecin", res.getInt("id_medecin"));
+                creneau.put("disponible", res.getBoolean("disponible"));
+                creneaux.add(creneau);
+            }
+            return new Response(request.getRequestId(),
+                    creneaux.isEmpty() ? "{\"message\": \"Aucun créneau disponible trouvé\"}"
+                            : objectMapper.writeValueAsString(creneaux));
+        }
     }
-}
-//afficher  les creneaux dispo
-private Response SelectAllCreneauxDisponibles(final Request request, final Connection connection)
-throws SQLException, JsonProcessingException {
-final ObjectMapper objectMapper = new ObjectMapper();
-try (Statement stmt = connection.createStatement();
-     ResultSet res = stmt.executeQuery(Queries.SELECT_ALL_CRENEAUX_DISPONIBLES.query)) {
-    List<Map<String, Object>> creneaux = new ArrayList<>();
-    while (res.next()) {
-        Map<String, Object> creneau = new HashMap<>();
-        creneau.put("id_disponibilite", res.getInt("id_disponibilite"));
-        creneau.put("jour", res.getString("jour"));
-        creneau.put("heure_debut", res.getString("heure_debut"));
-        creneau.put("heure_fin", res.getString("heure_fin"));
-        creneau.put("id_medecin", res.getInt("id_medecin"));
-        creneau.put("disponible", res.getBoolean("disponible"));
-        creneaux.add(creneau);
-    }
-    return new Response(request.getRequestId(),
-            creneaux.isEmpty() ? "{\"message\": \"Aucun créneau disponible trouvé\"}"
-                    : objectMapper.writeValueAsString(creneaux));
-}
-}
 
-//recup rdv par patient
-private Response SelectRendezVousByPatient(final Request request, final Connection connection)
-throws SQLException, JsonProcessingException, IOException {
-final ObjectMapper objectMapper = new ObjectMapper();
-int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
-try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ_VOUS_BY_PATIENT.query)) {
-    pstmt.setInt(1, idPatient);
-    ResultSet res = pstmt.executeQuery();
-    List<Map<String, Object>> rendezVous = new ArrayList<>();
-    while (res.next()) {
-        Map<String, Object> rdv = new HashMap<>();
-        rdv.put("id_consultation", res.getInt("id_consultation"));
-        rdv.put("id_patient", res.getInt("id_patient"));
-        rdv.put("id_medecin", res.getInt("id_medecin"));
-        rdv.put("id_disponibilite", res.getInt("id_disponibilite"));
-        rdv.put("heure_consultation", res.getString("heure_consultation"));
-        rendezVous.add(rdv);
+    // recup rdv par patient
+    private Response SelectRendezVousByPatient(final Request request, final Connection connection)
+            throws SQLException, JsonProcessingException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ_VOUS_BY_PATIENT.query)) {
+            pstmt.setInt(1, idPatient);
+            ResultSet res = pstmt.executeQuery();
+            List<Map<String, Object>> rendezVous = new ArrayList<>();
+            while (res.next()) {
+                Map<String, Object> rdv = new HashMap<>();
+                rdv.put("id_consultation", res.getInt("id_consultation"));
+                rdv.put("id_patient", res.getInt("id_patient"));
+                rdv.put("id_medecin", res.getInt("id_medecin"));
+                rdv.put("id_disponibilite", res.getInt("id_disponibilite"));
+                rdv.put("heure_consultation", res.getString("heure_consultation"));
+                rendezVous.add(rdv);
+            }
+            return new Response(request.getRequestId(),
+                    rendezVous.isEmpty() ? "{\"message\": \"Aucun rendez-vous trouvé pour ce patient\"}"
+                            : objectMapper.writeValueAsString(rendezVous));
+        }
     }
-    return new Response(request.getRequestId(),
-            rendezVous.isEmpty() ? "{\"message\": \"Aucun rendez-vous trouvé pour ce patient\"}"
-                    : objectMapper.writeValueAsString(rendezVous));
-}
-}
-     // associe un symptôme à un patient
+    // associe un symptôme à un patient
 
     private Response InsertPatientSymptome(final Request request, final Connection connection)
             throws SQLException, IOException {
@@ -773,9 +821,10 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
                 return new Response(request.getRequestId(), objectMapper.writeValueAsString(errorSymptome));
             }
 
-            // Vérifier si l'association existe déjà 
+            // Vérifier si l'association existe déjà
             boolean associationExiste = false;
-            try (PreparedStatement checkStmt = connection.prepareStatement(Queries.CHECK_PATIENT_SYMPTOME_EXISTS.query)) {
+            try (PreparedStatement checkStmt = connection
+                    .prepareStatement(Queries.CHECK_PATIENT_SYMPTOME_EXISTS.query)) {
                 checkStmt.setInt(1, idPatient);
                 checkStmt.setInt(2, idSymptome);
                 ResultSet rs = checkStmt.executeQuery();
@@ -786,7 +835,8 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
 
             // Insérer l'association si elle n'existe pas
             if (!associationExiste) {
-                try (PreparedStatement insertStmt = connection.prepareStatement(Queries.INSERT_PATIENT_SYMPTOME.query)) {
+                try (PreparedStatement insertStmt = connection
+                        .prepareStatement(Queries.INSERT_PATIENT_SYMPTOME.query)) {
                     insertStmt.setInt(1, idPatient);
                     insertStmt.setInt(2, idSymptome);
                     insertStmt.executeUpdate();
@@ -795,7 +845,8 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
 
             // Récupérer les détails du symptôme pour le retourner
             Symptomes symptome = new Symptomes();
-            try (PreparedStatement pstmt = connection.prepareStatement("SELECT id_symptome, description FROM symptomes WHERE id_symptome = ?")) {
+            try (PreparedStatement pstmt = connection
+                    .prepareStatement("SELECT id_symptome, description FROM symptomes WHERE id_symptome = ?")) {
                 pstmt.setInt(1, idSymptome);
                 ResultSet rs = pstmt.executeQuery();
                 if (rs.next()) {
@@ -840,7 +891,8 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
             return new Response(request.getRequestId(), "{\"message\": \"Association supprimée avec succès\"}");
         } catch (SQLException e) {
             connection.rollback();
-            return new Response(request.getRequestId(), "{\"message\": \"Erreur lors de la suppression: " + e.getMessage() + "\"}");
+            return new Response(request.getRequestId(),
+                    "{\"message\": \"Erreur lors de la suppression: " + e.getMessage() + "\"}");
         } finally {
             connection.setAutoCommit(true);
         }
@@ -886,7 +938,8 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
                 pstmt.setInt(3, idAncienSymptome);
                 int rowsUpdated = pstmt.executeUpdate();
                 if (rowsUpdated == 0) {
-                    try (PreparedStatement insertStmt = connection.prepareStatement(Queries.INSERT_PATIENT_SYMPTOME.query)) {
+                    try (PreparedStatement insertStmt = connection
+                            .prepareStatement(Queries.INSERT_PATIENT_SYMPTOME.query)) {
                         insertStmt.setInt(1, idPatient);
                         insertStmt.setInt(2, idNouveauSymptome);
                         insertStmt.executeUpdate();
@@ -895,7 +948,8 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
             }
             connection.commit();
             Symptomes nouveauSymptome = new Symptomes();
-            try (PreparedStatement pstmt = connection.prepareStatement("SELECT id_symptome, description FROM symptomes WHERE id_symptome = ?")) {
+            try (PreparedStatement pstmt = connection
+                    .prepareStatement("SELECT id_symptome, description FROM symptomes WHERE id_symptome = ?")) {
                 pstmt.setInt(1, idNouveauSymptome);
                 ResultSet rs = pstmt.executeQuery();
                 if (rs.next()) {
@@ -916,4 +970,47 @@ try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_RENDEZ
             connection.setAutoCommit(true);
         }
     }
+
+
+
+
+private Response insertDiagnostic(final Request request, final Connection connection) throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    JsonNode data = objectMapper.readTree(request.getRequestBody());
+    int idPatient = data.get("id_patient").asInt();
+    int idMaladie = data.get("id_maladie").asInt();
+    double score = data.get("score").asDouble();
+
+    try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_DIAGNOSTIC.query)) {
+        pstmt.setInt(1, idPatient);
+        pstmt.setInt(2, idMaladie);
+        pstmt.setDouble(3, score);
+        pstmt.setTimestamp(4, new java.sql.Timestamp(System.currentTimeMillis()));
+        int rowsAffected = pstmt.executeUpdate();
+        return new Response(request.getRequestId(),
+                rowsAffected > 0 ? "Diagnostic ajouté avec succès" : "Échec de l'ajout du diagnostic");
+    }
+}
+
+
+private Response selectPatientDiagnostics(final Request request, final Connection connection) throws SQLException, JsonProcessingException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
+    List<Map<String, Object>> diagnostics = new ArrayList<>();
+
+    try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PATIENT_DIAGNOSTICS.query)) {
+        pstmt.setInt(1, idPatient);
+        ResultSet res = pstmt.executeQuery();
+        while (res.next()) {
+            Map<String, Object> diagnosis = new HashMap<>();
+            diagnosis.put("id_maladie", res.getInt("id_maladie"));
+            diagnosis.put("score", res.getDouble("score"));
+            diagnosis.put("date_diagnostic", res.getString("date_diagnostic"));
+            diagnostics.add(diagnosis);
+        }
+    }
+    return new Response(request.getRequestId(),
+            diagnostics.isEmpty() ? "{\"message\": \"Aucun diagnostic trouvé\"}" : objectMapper.writeValueAsString(diagnostics));
+}
+
 }

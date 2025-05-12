@@ -60,7 +60,8 @@ public class FenetreDiagnostic extends JFrame {
     // INITIALISATION DE L'INTERFACE ET CONNEXION AU SERVEUR
     public FenetreDiagnostic() {
         NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setTcpport(45065);                     
+        networkConfig.setTcpport(45065);  
+        networkConfig.setIpaddress("172.31.252.216"); //adresse IP serveur                    
 
         serviceSymptome = new ServiceSymptome(networkConfig);
 
@@ -415,7 +416,7 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
 
-    // ENREGISTREMENT D'UN RENDEZ-VOUS MÉDICAL
+    // ENREGISTREMENT D'UN RENDEZ-VOUS 
     private void prendreRendezVous() {
         try {
             String appointmentDate = champDateRendezVous.getText().trim();

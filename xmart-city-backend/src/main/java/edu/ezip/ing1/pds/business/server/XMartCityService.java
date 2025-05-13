@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import edu.ezip.ing1.pds.business.dto.DiagnosticResult;
 import edu.ezip.ing1.pds.business.dto.Medecin;
@@ -533,128 +531,138 @@ public class XMartCityService {
 
     // diagnostiquer en f des symptomes
     private Response DiagnostiquerPatient(final Request request, final Connection connection)
-            throws SQLException, JsonProcessingException, IOException {
-        //récupère l’ID du patient depuis la requête
-        final ObjectMapper objectMapper = new ObjectMapper();
-        int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
-        List<Integer> symptomesPatient = new ArrayList<>();
+        throws SQLException, JsonProcessingException, IOException {
+    //récupère l’ID du patient depuis la requête
+    final ObjectMapper objectMapper = new ObjectMapper();
+    int idPatient = objectMapper.readValue(request.getRequestBody(), Integer.class);
+    List<Integer> symptomesPatient = new ArrayList<>();
 
-        //récupère les symptômes du patient depuis la base de données
-        try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PATIENT_SYMPTOMES.query)) {
-            pstmt.setInt(1, idPatient);
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                symptomesPatient.add(rs.getInt("id_symptome"));
+    //récupère les symptômes du patient depuis la base de données
+    try (PreparedStatement pstmt = connection.prepareStatement(Queries.SELECT_PATIENT_SYMPTOMES.query)) {
+        pstmt.setInt(1, idPatient);
+        ResultSet rs = pstmt.executeQuery();
+        while (rs.next()) {
+            symptomesPatient.add(rs.getInt("id_symptome"));
+        }
+    }
+    // Si le patient n’a pas de symptômes
+    if (symptomesPatient.isEmpty()) {
+        return new Response(request.getRequestId(), "{\"message\": \"Aucun symptôme trouvé pour ce patient\"}");
+    }
+
+    //récupère toutes les maladies leurs symptômes et leurs spécialités
+    Map<Integer, String> maladiesMap = new HashMap<>();
+    Map<Integer, List<Integer>> symptomesMaladies = new HashMap<>();
+    Map<Integer, String> specialitesMap = new HashMap<>();
+    Map<Integer, Integer> idSpecialitesMap = new HashMap<>();
+    try (PreparedStatement pstmt = connection.prepareStatement(
+            "SELECT m.id_maladie, m.nom_maladie, sm.id_symptome, s.nom_specialite, s.id_specialite " +
+                    "FROM maladies m " +
+                    "JOIN symptomes_maladies sm ON m.id_maladie = sm.id_maladie " +
+                    "LEFT JOIN specialites s ON m.id_specialite = s.id_specialite")) {
+        ResultSet rs = pstmt.executeQuery();
+        while (rs.next()) {
+            int idMaladie = rs.getInt("id_maladie");
+            maladiesMap.put(idMaladie, rs.getString("nom_maladie"));
+            symptomesMaladies.computeIfAbsent(idMaladie, k -> new ArrayList<>()).add(rs.getInt("id_symptome"));
+            specialitesMap.put(idMaladie,
+                    rs.getString("nom_specialite") != null ? rs.getString("nom_specialite") : "Généraliste");
+            int idSpecialite = rs.getInt("id_specialite");
+            if (!rs.wasNull()) {
+                idSpecialitesMap.put(idMaladie, idSpecialite);
+            } else {
+                idSpecialitesMap.put(idMaladie, 0);
             }
         }
-        // Si le patient n’a pas de symptômes
-        if (symptomesPatient.isEmpty()) {
-            return new Response(request.getRequestId(), "{\"message\": \"Aucun symptôme trouvé pour ce patient\"}");
-        }
+    }
 
-        //récupère toutes les maladies leurs symptômes et leurs spécialités
-        Map<Integer, String> maladiesMap = new HashMap<>();
-        Map<Integer, List<Integer>> symptomesMaladies = new HashMap<>();
-        Map<Integer, String> specialitesMap = new HashMap<>();
-        Map<Integer, Integer> idSpecialitesMap = new HashMap<>();
-        try (PreparedStatement pstmt = connection.prepareStatement(
-                "SELECT m.id_maladie, m.nom_maladie, sm.id_symptome, s.nom_specialite, s.id_specialite " +
-                        "FROM maladies m " +
-                        "JOIN symptomes_maladies sm ON m.id_maladie = sm.id_maladie " +
-                        "LEFT JOIN specialites s ON m.id_specialite = s.id_specialite")) {
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                int idMaladie = rs.getInt("id_maladie");
-                maladiesMap.put(idMaladie, rs.getString("nom_maladie"));
-                symptomesMaladies.computeIfAbsent(idMaladie, k -> new ArrayList<>()).add(rs.getInt("id_symptome"));
-                specialitesMap.put(idMaladie,
-                        rs.getString("nom_specialite") != null ? rs.getString("nom_specialite") : "Généraliste");
-                int idSpecialite = rs.getInt("id_specialite");
-                if (!rs.wasNull()) {
-                    idSpecialitesMap.put(idMaladie, idSpecialite);
-                } else {
-                    idSpecialitesMap.put(idMaladie, 0);
-                }
+    //calculer les diagnostics et leur score
+    List<DiagnosticResult> resultats = new ArrayList<>();
+    for (Map.Entry<Integer, List<Integer>> entry : symptomesMaladies.entrySet()) {
+        int idMaladie = entry.getKey();
+        List<Integer> symptomesMaladie = entry.getValue();
+        int correspondances = (int) symptomesMaladie.stream().filter(symptomesPatient::contains).count();
+        double score = (correspondances * 100.0) / symptomesMaladie.size();
+        if (score >= 50.0) {
+            DiagnosticResult result = new DiagnosticResult(
+                    maladiesMap.get(idMaladie),
+                    score,
+                    correspondances,
+                    symptomesMaladie.size(),
+                    symptomesPatient.size(),
+                    specialitesMap.get(idMaladie),
+                    idSpecialitesMap.getOrDefault(idMaladie, 0),
+                    score,
+                    (correspondances * 100.0) / symptomesPatient.size());
+            result.setId_maladie(idMaladie); 
+            resultats.add(result);
+        }
+    }
+    //trier les diagnostics par score du plus haut au plus bas
+    resultats.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
+
+    //insèrer les diagnostics dans la table patients_diagnostics
+    if (!resultats.isEmpty()) {
+        // Limiter à 5 diagnostics
+        List<DiagnosticResult> top5Resultats = resultats.subList(0, Math.min(5, resultats.size()));
+
+        // Préparer une insertion en batch
+        connection.setAutoCommit(false);
+        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_DIAGNOSTIC.query)) {
+            for (DiagnosticResult result : top5Resultats) {
+                pstmt.setInt(1, idPatient);
+                pstmt.setInt(2, result.getId_maladie());
+                pstmt.setDouble(3, result.getScore());
+                pstmt.setTimestamp(4, new java.sql.Timestamp(System.currentTimeMillis()));
+                pstmt.addBatch();
             }
+            pstmt.executeBatch(); // Exécuter toutes les insertions en une fois
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            logger.error("Erreur lors de l'insertion des diagnostics : {}", e.getMessage());
+            return new Response(request.getRequestId(), "{\"message\": \"Erreur lors de l'insertion des diagnostics: " + e.getMessage() + "\"}");
+        } finally {
+            connection.setAutoCommit(true);
         }
+    }
 
-        //calculer les diagnostics et leur score
-        List<DiagnosticResult> resultats = new ArrayList<>();
-        for (Map.Entry<Integer, List<Integer>> entry : symptomesMaladies.entrySet()) {
-            int idMaladie = entry.getKey();
-            List<Integer> symptomesMaladie = entry.getValue();
-            int correspondances = (int) symptomesMaladie.stream().filter(symptomesPatient::contains).count();
-            double score = (correspondances * 100.0) / symptomesMaladie.size();
-            if (score >= 50.0) {
-                DiagnosticResult result = new DiagnosticResult(
-                        maladiesMap.get(idMaladie),
-                        score,
-                        correspondances,
-                        symptomesMaladie.size(),
-                        symptomesPatient.size(),
-                        specialitesMap.get(idMaladie),
-                        idSpecialitesMap.getOrDefault(idMaladie, 0),
-                        score,
-                        (correspondances * 100.0) / symptomesPatient.size());
-                result.setId_maladie(idMaladie); 
-                resultats.add(result);
-            }
-        }
-        //trier les diagnostics par score du plus haut au plus bas
-        resultats.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
-
-        //insèrer chaque diagnostic dans la table patients_diagnostics
-        if (!resultats.isEmpty()) {
-            for (DiagnosticResult result : resultats) {
-                Request insertRequest = new Request();
-                insertRequest.setRequestId(UUID.randomUUID().toString());
-                insertRequest.setRequestOrder("INSERT_DIAGNOSIS");
-                ObjectNode dataNode = objectMapper.createObjectNode();
-                dataNode.put("id_patient", idPatient);
-                dataNode.put("id_maladie", result.getId_maladie()); 
-                dataNode.put("score", result.getScore());
-                insertRequest.setRequestContent(objectMapper.writeValueAsString(dataNode));
-                //insèrer le diagnostic dans la table
-                insertDiagnostic(insertRequest, connection);
-            }
-        }
-
-        //récupère les créneaux disponibles pour les spécialités associées
-        if (!resultats.isEmpty()) {
-            for (DiagnosticResult result : resultats) {
-                int idSpecialite = result.getIdSpecialite();
-                try (PreparedStatement pstmt = connection
-                        .prepareStatement(Queries.SELECT_ALL_CRENEAUX_DISPONIBLES.query)) {
-                    //filtrer les créneaux par spécialité via une jointure avec medecins
-                    ResultSet creneauxRs = pstmt.executeQuery();
-                    List<Map<String, Object>> creneaux = new ArrayList<>();
-                    while (creneauxRs.next()) {
-                        int idMedecin = creneauxRs.getInt("id_medecin");
-                        try (PreparedStatement medecinStmt = connection.prepareStatement(
-                                "SELECT id_specialite FROM medecins WHERE id_medecin = ?")) {
-                            medecinStmt.setInt(1, idMedecin);
-                            ResultSet medecinRs = medecinStmt.executeQuery();
-                            if (medecinRs.next() && medecinRs.getInt("id_specialite") == idSpecialite) {
-                                Map<String, Object> creneau = new HashMap<>();
-                                creneau.put("id_disponibilite", creneauxRs.getInt("id_disponibilite"));
-                                creneau.put("jour", creneauxRs.getString("jour"));
-                                creneau.put("heure_debut", creneauxRs.getString("heure_debut"));
-                                creneau.put("heure_fin", creneauxRs.getString("heure_fin"));
-                                creneau.put("id_medecin", idMedecin);
-                                creneaux.add(creneau);
-                            }
+    //récupère les créneaux disponibles pour les spécialités associées
+    if (!resultats.isEmpty()) {
+        for (DiagnosticResult result : resultats) {
+            int idSpecialite = result.getIdSpecialite();
+            try (PreparedStatement pstmt = connection
+                    .prepareStatement(Queries.SELECT_ALL_CRENEAUX_DISPONIBLES.query)) {
+                //filtrer les créneaux par spécialité via une jointure avec medecins
+                ResultSet creneauxRs = pstmt.executeQuery();
+                List<Map<String, Object>> creneaux = new ArrayList<>();
+                while (creneauxRs.next()) {
+                    int idMedecin = creneauxRs.getInt("id_medecin");
+                    try (PreparedStatement medecinStmt = connection.prepareStatement(
+                            "SELECT id_specialite FROM medecins WHERE id_medecin = ?")) {
+                        medecinStmt.setInt(1, idMedecin);
+                        ResultSet medecinRs = medecinStmt.executeQuery();
+                        if (medecinRs.next() && medecinRs.getInt("id_specialite") == idSpecialite) {
+                            Map<String, Object> creneau = new HashMap<>();
+                            creneau.put("id_disponibilite", creneauxRs.getInt("id_disponibilite"));
+                            creneau.put("jour", creneauxRs.getString("jour"));
+                            creneau.put("heure_debut", creneauxRs.getString("heure_debut"));
+                            creneau.put("heure_fin", creneauxRs.getString("heure_fin"));
+                            creneau.put("id_medecin", idMedecin);
+                            creneaux.add(creneau);
                         }
                     }
-                    result.setCreneauxDisponibles(creneaux);
                 }
+                result.setCreneauxDisponibles(creneaux);
             }
         }
-
-        //renvoie les diagnostics au client
-        return new Response(request.getRequestId(),
-                resultats.isEmpty() ? "{\"message\": \"Aucune maladie correspondante trouvée\"}"
-                        : objectMapper.writeValueAsString(resultats));
     }
+
+    //renvoie les diagnostics au client
+    return new Response(request.getRequestId(),
+            resultats.isEmpty() ? "{\"message\": \"Aucune maladie correspondante trouvée\"}"
+                    : objectMapper.writeValueAsString(resultats));
+}
     private Response InsertRendezVous(final Request request, final Connection connection)
             throws SQLException, IOException {
         final ObjectMapper objectMapper = new ObjectMapper();

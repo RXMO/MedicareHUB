@@ -174,8 +174,8 @@ public class ServiceSymptome {
     // Trie les résultats par score décroissant
     resultats.sort((r1, r2) -> Double.compare(r2.getScore(), r1.getScore()));
 
-    // Limite les insertions aux 3 meilleurs diagnostics
-    int maxDiagnosticsToInsert = 3;
+    // Limite les insertions aux 5 meilleurs diagnostics
+    int maxDiagnosticsToInsert = 5;
     if (!resultats.isEmpty()) {
         List<DiagnosticResult> topDiagnostics = resultats.subList(0, Math.min(maxDiagnosticsToInsert, resultats.size()));
         for (DiagnosticResult result : topDiagnostics) {

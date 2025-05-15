@@ -11,6 +11,7 @@ import edu.ezip.ing1.pds.business.dto.Medecins;
 import edu.ezip.ing1.pds.business.dto.Patients;
 import edu.ezip.ing1.pds.client.commons.ConfigLoader;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
+import edu.ezip.ing1.pds.PatientUIController;
 import edu.ezip.ing1.pds.services.MedecinService;
 import edu.ezip.ing1.pds.services.PatientService;
 import javafx.application.Application;
@@ -28,19 +29,19 @@ public class MainFrontEndFX extends Application implements Initializable {
     private final static String LoggingLabel = "FrontEnd";
     private final static Logger logger = LoggerFactory.getLogger(LoggingLabel);
     private final static String networkConfigFile = "network.yaml";
-    
+
     @FXML
     private Button btnMedecins;
-    
+
     @FXML
     private Button btnPatients;
-    
+
     @FXML
     private Button btnDiagnostic;
-    
+
     @FXML
     private Button btnOrdonnances;
-    
+
     private PatientService patientService;
     private Patients patients;
 
@@ -62,27 +63,27 @@ public class MainFrontEndFX extends Application implements Initializable {
                 alert.showAndWait();
                 return;
             }
-            
+
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
             loader.setController(this);
             Parent root = loader.load();
-            
+
             Scene scene = new Scene(root, 1000, 700);
-            
+
             // Configurer la fenêtre principale
             primaryStage.setTitle("Système de Gestion Médicale");
             primaryStage.setScene(scene);
             primaryStage.setResizable(false);
             primaryStage.centerOnScreen();
-            
+
             // Afficher la fenêtre
             primaryStage.show();
-            
+
             logger.info("Application démarrée avec succès");
         } catch (IOException e) {
             logger.error("Erreur lors du chargement de l'interface : {}", e.getMessage());
             e.printStackTrace();
-            
+
             // Afficher une alerte en cas d'erreur
             Alert alert = new Alert(AlertType.ERROR);
             alert.setTitle("Error");
@@ -91,7 +92,7 @@ public class MainFrontEndFX extends Application implements Initializable {
             alert.showAndWait();
         }
     }
-    
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         try {
@@ -107,7 +108,7 @@ public class MainFrontEndFX extends Application implements Initializable {
             showErrorAlert("Initialisation", e);
         }
     }
-    
+
     @FXML
     private void handleMedecinsAction() {
         try {
@@ -126,16 +127,41 @@ public class MainFrontEndFX extends Application implements Initializable {
             showErrorAlert("Médecins", ex);
         }
     }
-    
+
     @FXML
     private void handlePatientsAction() {
         try {
-            new PatientUI(patients, patientService);
+            // Charger la configuration réseau
+            final NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, networkConfigFile);
+
+            // Initialiser le service patient
+            PatientService patientService = new PatientService(networkConfig);
+            Patients patients = patientService.selectPatients();
+
+            // Charger le fichier FXML
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/patient_ui.fxml"));
+            Parent root = loader.load();
+
+            // Obtenir le contrôleur et injecter les dépendances
+            PatientUIController controller = loader.getController();
+            controller.setPatientService(patientService);
+
+            // Configurer la nouvelle fenêtre
+            Stage stage = new Stage();
+            stage.setTitle("Gestion des Patients");
+            stage.setScene(new Scene(root, 800, 600));
+            stage.setMinWidth(800);
+            stage.setMinHeight(600);
+            stage.centerOnScreen();
+            stage.show();
+
+            logger.info("Interface patients ouverte avec succès");
         } catch (Exception ex) {
+            logger.error("Erreur lors de l'ouverture de l'interface patients : {}", ex.getMessage());
             showErrorAlert("Patients", ex);
         }
     }
-    
+
     @FXML
     private void handleDiagnosticAction() {
         try {
@@ -144,10 +170,10 @@ public class MainFrontEndFX extends Application implements Initializable {
             if (fxmlUrl == null) {
                 throw new IOException("Fichier DiagnosticView.fxml non trouvé.");
             }
-            
+
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent root = loader.load();
-            
+
             // Créer une nouvelle scène et un nouveau stage
             Scene scene = new Scene(root);
             Stage stage = new Stage();
@@ -157,59 +183,65 @@ public class MainFrontEndFX extends Application implements Initializable {
             stage.setMinHeight(500);
             stage.centerOnScreen();
             stage.show();
-            
+
             logger.info("Interface de diagnostic ouverte avec succès");
         } catch (IOException ex) {
             logger.error("Erreur lors de l'ouverture de l'interface de diagnostic : {}", ex.getMessage());
             showErrorAlert("Diagnostic", ex);
         }
     }
-    
+
     @FXML
-    /*private void handleOrdonnancesAction() {
-        try {
-            // Charger la configuration réseau à partir du fichier "network.yaml"
-            NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, networkConfigFile);
-            
-            // Initialiser les services avec la configuration réseau
-            OrdonnanceService ordonnanceService = new OrdonnanceService(networkConfig);
-            MedicamentService medicamentService = new MedicamentService(networkConfig);
-            InteractionService interactionService = new InteractionService(networkConfig);
-            
-            // Charger le fichier FXML de l'interface Ordonnance
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/Ordonnance.fxml"));
-            
-            // Créer une instance du contrôleur et injecter les services
-            OrdonnanceController controller = new OrdonnanceController(ordonnanceService, medicamentService, interactionService);
-            loader.setController(controller);
-            
-            // Charger la vue
-            Parent root = loader.load();
-            
-            // Créer et configurer la scène
-            Scene scene = new Scene(root);
-            Stage stage = new Stage();
-            stage.setTitle("Gestion des Ordonnances");
-            stage.setScene(scene);
-            
-            // Afficher la fenêtre
-            stage.show();
-            
-        } catch (IOException ex) {
-            showErrorAlert("Ordonnances", ex);
-        }
-    }*/
-    
+    /*
+     * private void handleOrdonnancesAction() {
+     * try {
+     * // Charger la configuration réseau à partir du fichier "network.yaml"
+     * NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class,
+     * networkConfigFile);
+     * 
+     * // Initialiser les services avec la configuration réseau
+     * OrdonnanceService ordonnanceService = new OrdonnanceService(networkConfig);
+     * MedicamentService medicamentService = new MedicamentService(networkConfig);
+     * InteractionService interactionService = new
+     * InteractionService(networkConfig);
+     * 
+     * // Charger le fichier FXML de l'interface Ordonnance
+     * FXMLLoader loader = new
+     * FXMLLoader(getClass().getResource("/Ordonnance.fxml"));
+     * 
+     * // Créer une instance du contrôleur et injecter les services
+     * OrdonnanceController controller = new OrdonnanceController(ordonnanceService,
+     * medicamentService, interactionService);
+     * loader.setController(controller);
+     * 
+     * // Charger la vue
+     * Parent root = loader.load();
+     * 
+     * // Créer et configurer la scène
+     * Scene scene = new Scene(root);
+     * Stage stage = new Stage();
+     * stage.setTitle("Gestion des Ordonnances");
+     * stage.setScene(scene);
+     * 
+     * // Afficher la fenêtre
+     * stage.show();
+     * 
+     * } catch (IOException ex) {
+     * showErrorAlert("Ordonnances", ex);
+     * }
+     * }
+     */
+
     // Méthode pour afficher une alerte d'erreur
     private void showErrorAlert(String module, Exception ex) {
         Alert alert = new Alert(AlertType.ERROR);
         alert.setTitle("Erreur");
         alert.setHeaderText("Erreur lors de l'ouverture de l'interface " + module.toLowerCase());
         alert.setContentText(ex.getMessage());
-        
+
         logger.error("Erreur lors de l'ouverture de l'interface {} : {}", module.toLowerCase(), ex.getMessage());
         ex.printStackTrace();
-        
+
         alert.showAndWait();
     }
 }

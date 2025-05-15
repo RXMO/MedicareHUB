@@ -113,17 +113,32 @@ public class MainFrontEndFX extends Application implements Initializable {
     private void handleMedecinsAction() {
         try {
             // Charger la configuration réseau
-            NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, networkConfigFile);
+            final NetworkConfig networkConfig = ConfigLoader.loadConfig(NetworkConfig.class, networkConfigFile);
 
             // Initialiser le service médecin
             MedecinService medecinService = new MedecinService(networkConfig);
-
-            // Récupérer la liste des médecins
             Medecins medecins = medecinService.selectMedecins();
 
-            // Lancer l'interface du médecin avec les bons arguments
-            new MedecinUI(medecins, medecinService);
+            // Charger le fichier FXML
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/MedecinUI.fxml"));
+            Parent root = loader.load();
+
+            // Obtenir le contrôleur et injecter les dépendances
+            MedecinUIController controller = loader.getController();
+            controller.setMedecinService(medecinService);
+
+            // Configurer la nouvelle fenêtre
+            Stage stage = new Stage();
+            stage.setTitle("Gestion des Médecins");
+            stage.setScene(new Scene(root, 800, 600));
+            stage.setMinWidth(800);
+            stage.setMinHeight(600);
+            stage.centerOnScreen();
+            stage.show();
+
+            logger.info("Interface médecins ouverte avec succès");
         } catch (Exception ex) {
+            logger.error("Erreur lors de l'ouverture de l'interface médecins : {}", ex.getMessage());
             showErrorAlert("Médecins", ex);
         }
     }

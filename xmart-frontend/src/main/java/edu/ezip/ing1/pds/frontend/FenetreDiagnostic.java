@@ -30,44 +30,47 @@ import edu.ezip.ing1.pds.services.ServiceSymptome;
 public class FenetreDiagnostic extends JFrame {
 
     // CHAMPS DE TEXTE POUR LA SAISIE DES INFORMATIONS
-    private JTextField champSymptome;             //  NOM DU SYMPTÔME
-    private JTextField champModification;         //  MODIFIER UN SYMPTÔME
-    private JTextField champPatientId;            // SAISIE DE L'ID DU PATIENT
-    private JTextField champDateRendezVous;       // LA DATE DU RENDEZ-VOUS
+    private JTextField champSymptome;
+    private JTextField champModification;
+    private JTextField champPatientId;
+    private JTextField champDateRendezVous;
 
     // AFFICHAGE DES DONNÉES
-    private DefaultListModel<String> modelList;   
-    private JList<String> listeSymptomes;         // LISTE DES SYMPTÔMES AFFICHÉS
-    private JTextArea resultatDiagnostic;        
+    private DefaultListModel<String> modelList;
+    private JList<String> listeSymptomes;
+    private JTextArea resultatDiagnostic;
 
     // BOUTONS DE L'INTERFACE
-    private JButton boutonAjouter;                
-    private JButton boutonAfficher;              
-    private JButton boutonModifier;               
-    private JButton boutonSupprimer;              
-    private JButton boutonDiagnostiquer;         
-    private JButton boutonPrendreRendezVous;      
+    private JButton boutonAjouter;
+    private JButton boutonAfficher;
+    private JButton boutonModifier;
+    private JButton boutonSupprimer;
+    private JButton boutonDiagnostiquer;
+    private JButton boutonPrendreRendezVous;
 
-    private ServiceSymptome serviceSymptome;     
-    
-    private List<Symptomes> symptomesAjoutes = new ArrayList<>();  
-    private List<DiagnosticResult> derniersResultats;              // RÉSULTATS DU DERNIER DIAGNOSTIC
-    
-    private int idPatientActuel = 1;             
-    private Map<Integer, JComboBox<String>> creneauxComboBoxes = new HashMap<>();  // MENUS DÉROULANTS POUR CRÉNEAUX
-    private Map<Integer, Map<String, Map<String, Object>>> creneauxMap = new HashMap<>();  
+    private ServiceSymptome serviceSymptome;
 
-    // INITIALISATION DE L'INTERFACE ET CONNEXION AU SERVEUR
+    private List<Symptomes> symptomesAjoutes = new ArrayList<>();
+    private List<DiagnosticResult> derniersResultats;
+
+    private int idPatientActuel = 1;
+    private Map<Integer, JComboBox<String>> creneauxComboBoxes = new HashMap<>();
+    private Map<Integer, Map<String, Map<String, Object>>> creneauxMap = new HashMap<>();
+
+    // Nouveau panneau pour les créneaux interactifs
+    private JPanel creneauxPanel;
+
+    // Constructeur
     public FenetreDiagnostic() {
         NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setTcpport(45065);  
-        networkConfig.setIpaddress("172.31.252.216"); //adresse IP serveur                    
+        networkConfig.setTcpport(45065);
+        networkConfig.setIpaddress("172.31.252.216");
 
         serviceSymptome = new ServiceSymptome(networkConfig);
 
         setTitle("Diagnostic Médical");
         setSize(800, 500);
-        setMinimumSize(new Dimension(600, 500)); 
+        setMinimumSize(new Dimension(600, 500));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
@@ -75,8 +78,8 @@ public class FenetreDiagnostic extends JFrame {
         champPatientId = new JTextField(5);
         champPatientId.setText(String.valueOf(idPatientActuel));
         JButton boutonChargerPatient = new JButton("Charger Patient");
-        boutonChargerPatient.setPreferredSize(new Dimension(130, 30)); 
-        
+        boutonChargerPatient.setPreferredSize(new Dimension(130, 30));
+
         panelPatient.add(new JLabel("ID Patient:"));
         panelPatient.add(champPatientId);
         panelPatient.add(boutonChargerPatient);
@@ -97,15 +100,15 @@ public class FenetreDiagnostic extends JFrame {
         panelHaut.add(champSymptome);
         panelHaut.add(boutonAjouter);
         panelHaut.add(boutonAfficher);
-        
+
         JPanel panelCentre = new JPanel(new BorderLayout());
         panelCentre.add(panelHaut, BorderLayout.NORTH);
-        
+
         modelList = new DefaultListModel<>();
         listeSymptomes = new JList<>(modelList);
         JScrollPane scrollPane = new JScrollPane(listeSymptomes);
         panelCentre.add(scrollPane, BorderLayout.CENTER);
-        
+
         add(panelCentre, BorderLayout.CENTER);
 
         // MODIFICATION ET SUPPRESSION DE SYMPTÔMES
@@ -123,13 +126,18 @@ public class FenetreDiagnostic extends JFrame {
         panelBas.add(boutonSupprimer);
         add(panelBas, BorderLayout.SOUTH);
 
-        //  DIAGNOSTIC ET RENDEZ-VOUS
+        // DIAGNOSTIC ET RENDEZ-VOUS
         JPanel panelDroite = new JPanel(new BorderLayout());
         boutonDiagnostiquer = new JButton("Diagnostiquer");
         resultatDiagnostic = new JTextArea(10, 20);
         resultatDiagnostic.setEditable(false);
 
         boutonDiagnostiquer.setPreferredSize(new Dimension(150, 30));
+
+        // Panneau pour les créneaux
+        creneauxPanel = new JPanel();
+        creneauxPanel.setLayout(new BoxLayout(creneauxPanel, BoxLayout.Y_AXIS));
+        JScrollPane creneauxScrollPane = new JScrollPane(creneauxPanel);
 
         JPanel panelRendezVous = new JPanel(new FlowLayout());
         champDateRendezVous = new JTextField(10);
@@ -142,7 +150,8 @@ public class FenetreDiagnostic extends JFrame {
 
         panelDroite.add(boutonDiagnostiquer, BorderLayout.NORTH);
         panelDroite.add(new JScrollPane(resultatDiagnostic), BorderLayout.CENTER);
-        panelDroite.add(panelRendezVous, BorderLayout.SOUTH);
+        panelDroite.add(creneauxScrollPane, BorderLayout.SOUTH);
+        panelDroite.add(panelRendezVous, BorderLayout.PAGE_END);
         add(panelDroite, BorderLayout.EAST);
 
         // ÉCOUTEURS D'ÉVÉNEMENTS
@@ -157,7 +166,8 @@ public class FenetreDiagnostic extends JFrame {
         chargerSymptomesPatient();
     }
 
-    // CHARGEMENT DES DONNÉES D'UN PATIENT PAR SON ID
+    // (Méthodes inchangées : chargerPatient, chargerSymptomesPatient, ajouterSymptome, afficherSymptomes, modifierSymptome, supprimerSymptome)
+
     private void chargerPatient() {
         try {
             String idText = champPatientId.getText().trim();
@@ -182,7 +192,6 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
     
-    // RÉCUPÉRATION DES SYMPTÔMES DU PATIENT
     private void chargerSymptomesPatient() {
         try {
             symptomesAjoutes.clear();
@@ -197,7 +206,6 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
 
-    // AJOUT D'UN NOUVEAU SYMPTÔME AU PATIENT
     private void ajouterSymptome() {
         String symptomText = champSymptome.getText().trim();
         
@@ -230,8 +238,6 @@ public class FenetreDiagnostic extends JFrame {
                 symptomesAjoutes.add(symptomWithId);
             }
             
-            //afficherSymptomes(); 
-            
             JOptionPane.showMessageDialog(this, 
                 "Symptôme associé au patient avec succès ! ID: " + symptomWithId.getId(), 
                 "Succès", JOptionPane.INFORMATION_MESSAGE);
@@ -244,7 +250,6 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
     
-    // MISE À JOUR DE L'AFFICHAGE DES SYMPTÔMES DANS LA LISTE
     private void afficherSymptomes() {
         modelList.clear();
         for (Symptomes s : symptomesAjoutes) {
@@ -252,7 +257,6 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
 
-    // MODIFICATION D'UN SYMPTÔME EXISTANT
     private void modifierSymptome() {
         String selectedSymptom = listeSymptomes.getSelectedValue();
         String newName = champModification.getText().trim();
@@ -316,7 +320,6 @@ public class FenetreDiagnostic extends JFrame {
         }
     }
 
-    // SUPPRESSION D'UN SYMPTÔME DE LA LISTE DU PATIENT
     private void supprimerSymptome() {
         String selectedSymptom = listeSymptomes.getSelectedValue();
         if (selectedSymptom == null) {
@@ -377,46 +380,64 @@ public class FenetreDiagnostic extends JFrame {
     }
 
     // ANALYSE DES SYMPTÔMES POUR OBTENIR UN DIAGNOSTIC
-    private void diagnostiquer() {
-        try {
-            derniersResultats = serviceSymptome.diagnostiquer(idPatientActuel);
-            StringBuilder sb = new StringBuilder("Maladies possibles:\n");
-            creneauxComboBoxes.clear();
-            creneauxMap.clear();
-            if (derniersResultats.isEmpty()) {
-                sb.append("Aucune maladie trouvée pour ces symptômes.\n");
-            } else {
-                int diagnosticIndex = 0;
-                for (DiagnosticResult result : derniersResultats) {
-                    sb.append("- ").append(result.toString()).append("\n");
-                    List<Map<String, Object>> creneaux = result.getCreneauxDisponibles();
-                    if (creneaux != null && !creneaux.isEmpty()) {
-                        sb.append("  Créneaux disponibles:\n");
-                        Map<String, Map<String, Object>> creneauDetails = new HashMap<>();
-                        List<String> creneauOptions = new ArrayList<>();
-                        for (Map<String, Object> creneau : creneaux) {
-                            String creneauStr = String.format("%s de %s à %s (Médecin: %d)",
-                                    creneau.get("jour"), creneau.get("heure_debut"),
-                                    creneau.get("heure_fin"), creneau.get("id_medecin"));
-                            creneauOptions.add(creneauStr);
-                            creneauDetails.put(creneauStr, creneau);
-                        }
-                        creneauxMap.put(diagnosticIndex, creneauDetails);
-                        sb.append("    ").append(creneauOptions.get(0)).append("\n"); // AFFICHE LE PREMIER CRÉNEAU PAR DÉFAUT
-                    } else {
-                        sb.append("  Aucun créneau disponible pour cette spécialité.\n");
+    
+  private void diagnostiquer() {
+    long debut = System.currentTimeMillis();
+    try {
+        derniersResultats = serviceSymptome.diagnostiquer(idPatientActuel);
+        StringBuilder sb = new StringBuilder("Maladies possibles:\n");
+        creneauxComboBoxes.clear();
+        creneauxMap.clear();
+        creneauxPanel.removeAll(); // Nettoie le panneau des créneaux
+
+        if (derniersResultats.isEmpty()) {
+            sb.append("Aucune maladie trouvée pour ces symptômes.\n");
+        } else {
+            // Limiter à 5 diagnostics pour l'affichage
+            int maxDisplay = Math.min(5, derniersResultats.size());
+            for (int i = 0; i < maxDisplay; i++) {
+                DiagnosticResult result = derniersResultats.get(i);
+                sb.append("- ").append(result.toString()).append("\n");
+                List<Map<String, Object>> creneaux = result.getCreneauxDisponibles();
+                if (creneaux != null && !creneaux.isEmpty()) {
+                    Map<String, Map<String, Object>> creneauDetails = new HashMap<>();
+                    List<String> creneauOptions = new ArrayList<>();
+                    for (Map<String, Object> creneau : creneaux) {
+                        String creneauStr = String.format("%s de %s à %s (Médecin: %d)",
+                                creneau.get("jour"), creneau.get("heure_debut"),
+                                creneau.get("heure_fin"), creneau.get("id_medecin"));
+                        creneauOptions.add(creneauStr);
+                        creneauDetails.put(creneauStr, creneau);
                     }
-                    diagnosticIndex++;
+                    creneauxMap.put(i, creneauDetails);
+
+                    // Créer un JComboBox pour ce diagnostic
+                    JComboBox<String> creneauComboBox = new JComboBox<>(creneauOptions.toArray(new String[0]));
+                    creneauxComboBoxes.put(i, creneauComboBox);
+
+                    // Ajouter un label et le JComboBox au panneau des créneaux
+                    JPanel creneauEntry = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    creneauEntry.add(new JLabel("Créneaux pour diagnostic " + (i + 1) + ":"));
+                    creneauEntry.add(creneauComboBox);
+                    creneauxPanel.add(creneauEntry);
+                } else {
+                    sb.append("  Aucun créneau disponible pour cette spécialité.\n");
                 }
             }
-            resultatDiagnostic.setText(sb.toString());
-        } catch (Exception ex) {
-            resultatDiagnostic.setText("Erreur lors du diagnostic: " + ex.getMessage());
-            JOptionPane.showMessageDialog(this, "Erreur: " + ex.getMessage(), "Erreur de diagnostic", JOptionPane.ERROR_MESSAGE);
         }
+        resultatDiagnostic.setText(sb.toString());
+        creneauxPanel.revalidate();
+        creneauxPanel.repaint();
+    } catch (Exception ex) {
+        resultatDiagnostic.setText("Erreur lors du diagnostic: " + ex.getMessage());
+        JOptionPane.showMessageDialog(this, "Erreur: " + ex.getMessage(), "Erreur de diagnostic", JOptionPane.ERROR_MESSAGE);
     }
+    long fin = System.currentTimeMillis();
+    System.out.println("Temps diagnostic : " + (fin - debut) + " ms");
+}
 
-    // ENREGISTREMENT D'UN RENDEZ-VOUS 
+
+    // ENREGISTREMENT D'UN RENDEZ-VOUS
     private void prendreRendezVous() {
         try {
             String appointmentDate = champDateRendezVous.getText().trim();
@@ -428,36 +449,65 @@ public class FenetreDiagnostic extends JFrame {
                 JOptionPane.showMessageDialog(this, "Effectuez un diagnostic avant de prendre un rendez-vous.", "Erreur", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-    
-            // UTILISATION DU PREMIER DIAGNOSTIC POUR DÉTERMINER LA SPÉCIALITÉ
-            DiagnosticResult selectedDiagnostic = derniersResultats.get(0);
+
+            // Demander à l'utilisateur de choisir un diagnostic
+            String[] diagnosticOptions = new String[derniersResultats.size()];
+            for (int i = 0; i < derniersResultats.size(); i++) {
+                diagnosticOptions[i] = "Diagnostic " + (i + 1) + ": " + derniersResultats.get(i).toString();
+            }
+            String selectedDiagnosticStr = (String) JOptionPane.showInputDialog(
+                this,
+                "Sélectionnez un diagnostic pour prendre rendez-vous:",
+                "Choix du diagnostic",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                diagnosticOptions,
+                diagnosticOptions[0]
+            );
+
+            if (selectedDiagnosticStr == null) {
+                return; // L'utilisateur a annulé
+            }
+
+            // Extraire l'index du diagnostic sélectionné
+            int selectedIndex = Integer.parseInt(selectedDiagnosticStr.split(":")[0].replace("Diagnostic ", "").trim()) - 1;
+            DiagnosticResult selectedDiagnostic = derniersResultats.get(selectedIndex);
+
             int specialtyId = selectedDiagnostic.getIdSpecialite();
             if (specialtyId == 0) {
-                specialtyId = 1; 
+                specialtyId = 1;
             }
-    
-            // VÉRIFICATION DE LA DISPONIBILITÉ DES CRÉNEAUX
-            List<Map<String, Object>> creneaux = selectedDiagnostic.getCreneauxDisponibles();
-            if (creneaux == null || creneaux.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Aucun créneau disponible pour cette spécialité.", "Erreur", JOptionPane.ERROR_MESSAGE);
+
+            // Vérifier si des créneaux sont disponibles
+            if (!creneauxComboBoxes.containsKey(selectedIndex)) {
+                JOptionPane.showMessageDialog(this, "Aucun créneau disponible pour ce diagnostic.", "Erreur", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-    
-            // SÉLECTION DU PREMIER CRÉNEAU DISPONIBLE
-            Map<String, Object> selectedCreneau = creneaux.get(0);
+
+            // Récupérer le créneau sélectionné dans le JComboBox
+            JComboBox<String> selectedComboBox = creneauxComboBoxes.get(selectedIndex);
+            String selectedCreneauStr = (String) selectedComboBox.getSelectedItem();
+            Map<String, Map<String, Object>> creneauDetails = creneauxMap.get(selectedIndex);
+            Map<String, Object> selectedCreneau = creneauDetails.get(selectedCreneauStr);
+
+            if (selectedCreneau == null) {
+                JOptionPane.showMessageDialog(this, "Erreur lors de la récupération du créneau sélectionné.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             int idDisponibilite = (int) selectedCreneau.get("id_disponibilite");
             int idMedecin = (int) selectedCreneau.get("id_medecin");
-    
+
             // ENVOI DE LA DEMANDE DE RENDEZ-VOUS AU SERVEUR
             String message = serviceSymptome.creerRendezVous(idPatientActuel, appointmentDate, specialtyId, idDisponibilite, idMedecin);
-    
+
             // VÉRIFICATION DU RÉSULTAT ET AFFICHAGE AU UTILISATEUR
             if (message.toLowerCase().contains("erreur") || message.toLowerCase().contains("non disponible") || message.toLowerCase().contains("invalide")) {
                 JOptionPane.showMessageDialog(this, message, "Erreur lors de la prise de rendez-vous", JOptionPane.ERROR_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, message, "Succès", JOptionPane.INFORMATION_MESSAGE);
             }
-    
+
             // MISE À JOUR DES CRÉNEAUX DISPONIBLES APRÈS PRISE DU RENDEZ-VOUS
             diagnostiquer();
         } catch (Exception ex) {

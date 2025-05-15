@@ -10,6 +10,7 @@ import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
 
+// SUPPRIMER UNE MALADIE DE LA BASE DE DONNÉES
 public class DeleteMaladieClientRequest extends ClientRequest<Maladie, String> {
 
     public DeleteMaladieClientRequest(
@@ -22,6 +23,6 @@ public class DeleteMaladieClientRequest extends ClientRequest<Maladie, String> {
     public String readResult(String body) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
         final Map<String, String> responseMap = mapper.readValue(body, Map.class);
-        return responseMap.get("message");
+        return responseMap.get("message"); // EXTRACTION DU MESSAGE DE RÉPONSE
     }
 }

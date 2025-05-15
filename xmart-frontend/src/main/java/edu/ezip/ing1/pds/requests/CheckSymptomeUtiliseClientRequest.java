@@ -9,6 +9,7 @@ import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
 
 
+//VÉRIFIER L'UTILISATION D'UN SYMPTÔME
 public class CheckSymptomeUtiliseClientRequest extends ClientRequest<Integer, Boolean> {
 
     public CheckSymptomeUtiliseClientRequest(
@@ -24,8 +25,7 @@ public class CheckSymptomeUtiliseClientRequest extends ClientRequest<Integer, Bo
             return mapper.readValue(body, Boolean.class);
         } catch (Exception ex) {
             System.err.println("Impossible de parser la réponse: " + body);
-            return true;
+            return true; // VALEUR PAR DÉFAUT EN CAS D'ERREUR
         }
     }
 }
-//

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="edu.ezip.ing1.pds.frontend.DiagnosticController">
+    <top>
+        <HBox prefWidth="760.0" spacing="10">
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="10" />
+            </padding>
+            <Label text="ID Patient :">
+            <font>
+               <Font name="System Bold" size="12.0" />
+            </font></Label>
+            <TextField fx:id="champPatientId" prefHeight="26.0" prefWidth="106.0" promptText="Entrez ID patient" />
+            <Button fx:id="boutonChargerPatient" onAction="#chargerPatient" text="Charger" />
+        </HBox>
+    </top>
+    <center>
+        <VBox spacing="10">
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="10" />
+            </padding>
+            <HBox spacing="10">
+                <Label text="Symptômes : ">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font></Label>
+                <TextField fx:id="champSymptome" prefHeight="25.0" prefWidth="141.0" promptText="Insérez vos symptomes" />
+                <Button fx:id="boutonAjouter" onAction="#ajouterSymptome" style="-fx-background-color: #3498db;" text="Ajouter" />
+                <Button fx:id="boutonAfficher" onAction="#afficherSymptomes" style="-fx-background-color: #3498db;" text="Afficher" />
+            </HBox>
+            <ListView fx:id="listeSymptomes" prefHeight="278.0" prefWidth="360.0" />
+        </VBox>
+    </center>
+    <bottom>
+        <HBox spacing="10">
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="10" />
+            </padding>
+            <Label text="Modifier le symptôme sélectionné:">
+            <font>
+               <Font name="System Bold" size="12.0" />
+            </font></Label>
+            <TextField fx:id="champModification" prefHeight="25.0" prefWidth="177.0" promptText="entrez le symptome à modifier " />
+            <Button fx:id="boutonModifier" onAction="#modifierSymptome" style="-fx-background-color: #3498db;" text="Modifier" />
+            <Button fx:id="boutonSupprimer" onAction="#supprimerSymptome" style="-fx-background-color: #e74c3c;" text="Supprimer" />
+        </HBox>
+    </bottom>
+    <right>
+        <VBox spacing="10">
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="10" />
+            </padding>
+            <Button fx:id="boutonDiagnostiquer" onAction="#diagnostiquer" prefHeight="25.0" prefWidth="360.0" style="-fx-background-color: #2da#0e8;" text="Diagnostiquer" />
+            <TextArea fx:id="resultatDiagnostic" editable="false" prefHeight="200" prefWidth="300" promptText="les détails du diagnostic s'afficheront ici ..." wrapText="true" />
+            <ScrollPane>
+                <VBox fx:id="creneauxPanel" spacing="10" />
+            </ScrollPane>
+            <HBox spacing="10">
+                <Label prefHeight="22.0" prefWidth="105.0" text="Date rendez-vous">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font></Label>
+                <TextField fx:id="champDateRendezVous" prefHeight="25.0" prefWidth="103.0" promptText="AAAA-MM-JJ" />
+                <Button fx:id="boutonPrendreRendezVous" onAction="#prendreRendezVous" style="-fx-background-color: #2da#0e8;" text="Prendre Rendez-vous" />
+            </HBox>
+        </VBox>
+    </right>
+</BorderPane>

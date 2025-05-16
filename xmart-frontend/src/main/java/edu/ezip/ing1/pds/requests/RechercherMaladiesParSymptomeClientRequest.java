@@ -10,6 +10,7 @@ import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
 
+// RECHERCHER DES MALADIES ASSOCIÉES À UN SYMPTÔME
 public class RechercherMaladiesParSymptomeClientRequest extends ClientRequest<String, List<String>> {
 
     private List<String> maladies;
@@ -21,9 +22,11 @@ public class RechercherMaladiesParSymptomeClientRequest extends ClientRequest<St
 
     @Override
     public List<String> readResult(String body) throws IOException {
+        // VÉRIFICATION SI AUCUNE MALADIE N'EST TROUVÉE
         if (body.startsWith("Aucune")) {
-            return List.of();
+            return List.of(); // RETOURNE UNE LISTE VIDE
         } else {
+            // CONVERSION DE LA RÉPONSE JSON EN LISTE DE NOMS DE MALADIES
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readValue(body, new TypeReference<List<String>>() {});
         }

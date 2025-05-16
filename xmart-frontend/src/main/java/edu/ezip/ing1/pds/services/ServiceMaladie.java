@@ -1,8 +1,9 @@
-package edu.ezip.ing1.pds.services;
+/*package edu.ezip.ing1.pds.services;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -78,7 +79,7 @@ public class ServiceMaladie {
         }
     }
 
-    public Maladie selectMaladies() throws InterruptedException, IOException {
+    public List<Maladie> selectMaladies() throws InterruptedException, IOException {
         final Deque<ClientRequest> maladieRequests = new ArrayDeque<>();
         final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -98,10 +99,10 @@ public class ServiceMaladie {
             final ClientRequest joinedMaladieRequest = maladieRequests.pop();
             joinedMaladieRequest.join();
             logger.debug("Thread {} terminé.", joinedMaladieRequest.getThreadName());
-            return (Maladie) joinedMaladieRequest.getResult();
+            return (List<Maladie>) joinedMaladieRequest.getResult();
         } else {
             logger.error("Aucune maladie trouvée !");
-            return null;
+            return List.of(); // Retourne une liste vide au lieu de null
         }
     }
-}
+}*/

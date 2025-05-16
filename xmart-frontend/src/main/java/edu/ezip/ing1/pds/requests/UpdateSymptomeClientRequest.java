@@ -10,6 +10,7 @@ import edu.ezip.ing1.pds.client.commons.ClientRequest;
 import edu.ezip.ing1.pds.client.commons.NetworkConfig;
 import edu.ezip.ing1.pds.commons.Request;
 
+// METTRE À JOUR UN SYMPTÔME EXISTANT
 public class UpdateSymptomeClientRequest extends ClientRequest<Symptomes, String> {
 
     public UpdateSymptomeClientRequest(
@@ -21,7 +22,9 @@ public class UpdateSymptomeClientRequest extends ClientRequest<Symptomes, String
     @Override
     public String readResult(String body) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
+        // CONVERSION DE LA RÉPONSE JSON EN MAP
         final Map<String, String> responseMap = mapper.readValue(body, Map.class);
+        // EXTRACTION DU MESSAGE DE CONFIRMATION
         return responseMap.get("message");
     }
 }

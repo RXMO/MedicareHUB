@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="edu.ezip.ing1.pds.PatientUIController" spacing="10" 
+      style="-fx-padding: 10; -fx-background-color: #f4f4f4;">
+    
+    <!-- Titre de l'application -->
+    <Label text="Gestion des Patients" style="-fx-font-size: 20px; -fx-font-weight: bold;">
+        <padding>
+            <Insets bottom="10"/>
+        </padding>
+    </Label>
+    
+    <!-- Formulaire de saisie -->
+    <GridPane hgap="10" vgap="10">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="30"/>
+            <ColumnConstraints percentWidth="70"/>
+        </columnConstraints>
+        
+        <!-- Ligne 1: ID -->
+        <Label text="ID:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="idField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+        
+        <!-- Ligne 2: Nom -->
+        <Label text="Nom:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="nomField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+        
+        <!-- Ligne 3: Prénom -->
+        <Label text="Prénom:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="prenomField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+        
+        <!-- Ligne 4: Téléphone -->
+        <Label text="Téléphone:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="telField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        
+        <!-- Ligne 5: Allergies -->
+        <Label text="Allergies:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="allergiesField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+    </GridPane>
+    
+    <!-- Boutons d'action -->
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="ajouterButton" text="Ajouter" style="-fx-base: #4CAF50; -fx-text-fill: white;"/>
+        <Button fx:id="mettreAJourButton" text="Mettre à jour" style="-fx-base: #2196F3; -fx-text-fill: white;"/>
+        <Button fx:id="supprimerButton" text="Supprimer" style="-fx-base: #f44336; -fx-text-fill: white;"/>
+        <Button fx:id="actualiserButton" text="Actualiser" style="-fx-base: #FF9800; -fx-text-fill: white;"/>
+    </HBox>
+    
+    <!-- Tableau des patients -->
+    <TableView fx:id="patientTable" style="-fx-padding: 5;">
+        <columns>
+            <TableColumn fx:id="idColumn" text="ID" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="nomColumn" text="Nom" style="-fx-alignment: CENTER-LEFT;"/>
+            <TableColumn fx:id="prenomColumn" text="Prénom" style="-fx-alignment: CENTER-LEFT;"/>
+            <TableColumn fx:id="telColumn" text="Téléphone" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="allergiesColumn" text="Allergies" style="-fx-alignment: CENTER-LEFT;"/>
+        </columns>
+        <columnResizePolicy>
+            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+        </columnResizePolicy>
+    </TableView>
+    
+   
+</VBox>

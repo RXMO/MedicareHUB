@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+
 import edu.ezip.commons.LoggingUtils;
 import edu.ezip.ing1.pds.business.dto.Medecin;
 import edu.ezip.ing1.pds.business.dto.Medecins;
@@ -29,6 +32,7 @@ public class MedecinService {
     final String selectRequestOrder = "SELECT_ALL_MEDECINS";
     final String deleteRequestOrder = "DELETE_MEDECIN";
     final String updateRequestOrder = "UPDATE_MEDECIN";
+
     private final NetworkConfig networkConfig;
 
     public MedecinService(NetworkConfig networkConfig) {
@@ -125,3 +129,4 @@ public class MedecinService {
         }
     }
 }
+

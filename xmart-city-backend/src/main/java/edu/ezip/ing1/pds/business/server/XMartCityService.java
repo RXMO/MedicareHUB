@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import edu.ezip.ing1.pds.business.dto.Medecin;
@@ -46,6 +47,7 @@ public class XMartCityService {
         UPDATE_PATIENT(
                 "UPDATE Patients SET nom_patient = ?, prenom_patient = ?, num_tel = ?, allergies = ? WHERE id_patient = ?"),
         DELETE_PATIENT("DELETE FROM Patients WHERE id_patient = ?"),
+        
         SELECT_ALL_ORDONNANCES("SELECT * FROM ordonnance ORDER BY id_ordonnance DESC"),
         INSERT_ORDONNANCE(
                 "INSERT INTO ordonnance (description, id_patient, id_medecin, id_consultation) VALUES (?, ?, ?, ?)"),
@@ -54,11 +56,21 @@ public class XMartCityService {
         DELETE_ORDONNANCE("DELETE FROM ordonnance WHERE id_ordonnance = ?"),
         INSERT_PRESCRIPTION("INSERT INTO Prescription (id_ordonnance, id_medicament, posologie) VALUES (?, ?, ?)"),
         SELECT_ALL_MEDICAMENTS("SELECT id_medicament, nom_medicament, principe_actif FROM medicament"),
-        SELECT_PRESCRIPTION_PAR_ORDONNANCE(
-                "SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
+        SELECT_PRESCRIPTION_PAR_ORDONNANCE("SELECT m.id_medicament, m.nom_medicament, p.posologie FROM Prescription p " +
                         "JOIN medicament m ON p.id_medicament = m.id_medicament " +
                         "WHERE p.id_ordonnance = ?"),
-        
+        SELECT_MEDICAMENTS_PAR_ORDONNANCE(
+                            "SELECT m.nom_medicament FROM medicament m " +
+                            "JOIN Prescription p ON m.id_medicament = p.id_medicament " +
+                            "WHERE p.id_ordonnance = ?"),
+        VERIFIER_INTERACTIONS_MEDICAMENTEUSES(
+                            "SELECT description FROM interaction_medicamenteuse " +
+                            "WHERE (id_medicament1 = ? AND id_medicament2 = ?) " +
+                            "OR (id_medicament2 = ? AND id_medicament1 = ?)"),
+  
+        VERIFIER_MEDECIN_CONNEXION("SELECT * FROM medecins WHERE id_medecin = ? AND nom_medecin = ?"),
+
+
         // Requêtes pour les symptômes et diagnostic
         SELECT_ALL_SYMPTOMES("SELECT id_symptome, description FROM symptomes"),
         INSERT_SYMPTOME("INSERT INTO symptomes (description) VALUES (?)"),
@@ -156,7 +168,15 @@ public class XMartCityService {
                 break;
             case RECHERCHER_MALADIES_PAR_SYMPTOME:
                 response = rechercherMaladiesParSymptome(request, connection);
+                break; 
+            case VERIFIER_INTERACTIONS_MEDICAMENTEUSES:
+                response = verifierInteractionsManuelle(request, connection);
                 break;
+            /*case VERIFIER_MEDECIN_CONNEXION:
+                response = verifierConnexionMedecin(request, connection);
+                break;*/
+    
+            
             default:
                 break;
         }
@@ -284,7 +304,9 @@ public class XMartCityService {
         }
     }
 
-    private Response DeletePatient(final Request request, final Connection connection)
+    
+
+     private Response DeletePatient(final Request request, final Connection connection)
             throws SQLException, IOException {
         final ObjectMapper objectMapper = new ObjectMapper();
         Patient requestData = objectMapper.readValue(request.getRequestBody(), Patient.class);
@@ -295,6 +317,7 @@ public class XMartCityService {
                     rowsAffected > 0 ? "Patient supprimé avec succès" : "Échec de la suppression du patient");
         }
     }
+
 
     private Response SelectAllOrdonnances(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
@@ -336,41 +359,114 @@ public class XMartCityService {
         }
     }
 
+    
     private Response DeleteOrdonnance(final Request request, final Connection connection)
-            throws SQLException, JsonProcessingException {
-        final ObjectMapper objectMapper = new ObjectMapper();
-        Ordonnance ordonnance = null;
-        try {
-            ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
-        } catch (IOException e) {
-            return new Response(request.getRequestId(), "Erreur lors de la lecture de l'ordonnance");
-        }
+        throws SQLException, IOException {
+            final ObjectMapper objectMapper = new ObjectMapper();
+            Ordonnance requestData = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
+    
+            try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_ORDONNANCE.query)) {
+                pstmt.setInt(1, requestData.getIdOrdonnance());
+                int rowsAffected = pstmt.executeUpdate();
+    
+                String messageJson;
+                if (rowsAffected > 0) {
+                     messageJson = "{\"message\":\"Ordonnance supprimée avec succès\"}";
+                } else {
+                    messageJson = "{\"message\":\"Aucune ordonnance trouvée pour suppression\"}";
+                }
+    
+                return new Response(request.getRequestId(), messageJson);
+            }
 
-        try (PreparedStatement pstmt = connection.prepareStatement(Queries.DELETE_ORDONNANCE.query)) {
-            pstmt.setInt(1, ordonnance.getIdOrdonnance());
-            int rowsAffected = pstmt.executeUpdate();
-            if (rowsAffected > 0) {
-                return new Response(request.getRequestId(), "Ordonnance supprimée avec succès");
-            } else {
-                return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour suppression");
+    }
+
+    private Response verifierInteractionsManuelle(final Request request, final Connection connection)
+        throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+
+    List<String> medicaments = objectMapper.readValue(request.getRequestBody(), new TypeReference<List<String>>() {});
+
+    if (medicaments.size() < 2) {
+        return new Response(request.getRequestId(), "{\"error\":\"Au moins deux médicaments sont nécessaires pour vérifier les interactions.\"}");
+    }
+
+    List<String> interactions = verifierInteractionsMedicamenteuses(medicaments, connection);
+
+    if (interactions.isEmpty()) {
+        return new Response(request.getRequestId(), "{\"message\":\"Aucune interaction détectée.\"}");
+    } else {
+        // Retourner une liste JSON des interactions 
+        String jsonResponse = objectMapper.writeValueAsString(interactions);
+        return new Response(request.getRequestId(), jsonResponse);
+    }
+}
+
+
+private Response InsertOrdonnance(final Request request, final Connection connection)
+        throws SQLException, IOException {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    Ordonnance ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
+
+    // Vérifier que le médecin existe
+    try (PreparedStatement checkMedecinStmt = connection.prepareStatement(
+            "SELECT 1 FROM medecins WHERE id_medecin = ?")) {
+        checkMedecinStmt.setInt(1, ordonnance.getIdMedecin());
+        try (ResultSet rsCheck = checkMedecinStmt.executeQuery()) {
+            if (!rsCheck.next()) {
+                return new Response(request.getRequestId(), 
+                    "{\"error\":\"Le médecin avec l'ID " + ordonnance.getIdMedecin() + " n'existe pas.\"}");
             }
         }
     }
 
-    private Response InsertOrdonnance(final Request request, final Connection connection)
-            throws SQLException, IOException {
-        final ObjectMapper objectMapper = new ObjectMapper();
-        Ordonnance ordonnance = objectMapper.readValue(request.getRequestBody(), Ordonnance.class);
+    // Vérifier que le patient existe
+    try (PreparedStatement checkPatientStmt = connection.prepareStatement(
+            "SELECT 1 FROM Patients WHERE id_patient = ?")) {
+        checkPatientStmt.setInt(1, ordonnance.getIdPatient());
+        try (ResultSet rsCheckPatient = checkPatientStmt.executeQuery()) {
+            if (!rsCheckPatient.next()) {
+                return new Response(request.getRequestId(),
+                    "{\"error\":\"Le patient avec l'ID " + ordonnance.getIdPatient() + " n'existe pas.\"}");
+            }
+        }
+    }
+    //vérifier l'id_consultation est enregistrée dans la bdd 
+    try (PreparedStatement checkConsultStmt = connection.prepareStatement(
+            "SELECT 1 FROM consultation WHERE id_consultation = ?")) {
+        checkConsultStmt.setInt(1, ordonnance.getIdConsultation());
+        try (ResultSet rsCheckConsult = checkConsultStmt.executeQuery()) {
+            if (!rsCheckConsult.next()) {
+                return new Response(request.getRequestId(),
+                    "{\"error\":\"La consultation avec l'ID " + ordonnance.getIdConsultation() + " n'existe pas.\"}");
+            }
+        }
+    }
 
-        try (PreparedStatement pstmt = connection.prepareStatement(Queries.INSERT_ORDONNANCE.query,
-                Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, ordonnance.getDescription());
-            pstmt.setInt(2, ordonnance.getIdPatient());
-            pstmt.setInt(3, ordonnance.getIdMedecin());
-            pstmt.setInt(4, ordonnance.getIdConsultation());
-            pstmt.executeUpdate();
+    // Extraire les noms des médicaments
+    List<String> medicamentNames = extractMedicamentsFromDescription(ordonnance.getDescription());
+    System.out.println("Médicaments extraits de la description: " + String.join(", ", medicamentNames));
 
-            ResultSet rs = pstmt.getGeneratedKeys();
+    // Vérifier les interactions médicamenteuses
+    List<String> interactions = verifierInteractionsMedicamenteuses(medicamentNames, connection);
+
+    if (!interactions.isEmpty()) {
+        System.out.println("Interactions détectées: " + String.join(", ", interactions));
+        String errorMsg = "{\"error\":\"Impossible d'insérer l'ordonnance en raison des interactions suivantes: " 
+                          + String.join(", ", interactions).replace("\"", "\\\"") + "\"}";
+        return new Response(request.getRequestId(), errorMsg);
+    }
+
+    // Insérer ordonnance + prescriptions
+    try (PreparedStatement pstmt = connection.prepareStatement(
+            Queries.INSERT_ORDONNANCE.query, Statement.RETURN_GENERATED_KEYS)) {
+        pstmt.setString(1, ordonnance.getDescription());
+        pstmt.setInt(2, ordonnance.getIdPatient());
+        pstmt.setInt(3, ordonnance.getIdMedecin());
+        pstmt.setInt(4, ordonnance.getIdConsultation());
+        pstmt.executeUpdate();
+
+        try (ResultSet rs = pstmt.getGeneratedKeys()) {
             if (rs.next()) {
                 int idOrdonnance = rs.getInt(1);
                 for (Prescription prescription : ordonnance.getPrescriptions()) {
@@ -382,10 +478,115 @@ public class XMartCityService {
                     }
                 }
             }
-
-            return new Response(request.getRequestId(), "Ordonnance et prescriptions ajoutées avec succès");
         }
     }
+    // supprimer a consultation une fois l'insertion est effectuée
+    String deleteConsultationSQL = "DELETE FROM consultation WHERE id_consultation = ?";
+    try (PreparedStatement deleteStmt = connection.prepareStatement(deleteConsultationSQL)) {
+        deleteStmt.setInt(1, ordonnance.getIdConsultation());
+        int rowsAffected = deleteStmt.executeUpdate();
+
+       if (rowsAffected == 0) {
+        logger.warn("Aucune ligne supprimée : consultation avec ID {} non trouvée", ordonnance.getIdConsultation());
+       } else {
+        logger.debug("Consultation ID {} supprimée avec succès", ordonnance.getIdConsultation());
+       }
+    }
+    return new Response(request.getRequestId(), "{\"message\":\"Ordonnance et prescriptions ajoutées avec succès\"}");
+}
+
+private List<String> extractMedicamentsFromDescription(String description) {
+    List<String> medicamentNames = new ArrayList<>();
+    if (description != null) {
+        int index = description.indexOf("Medicaments:");
+        if (index != -1 && index + "Medicaments:".length() < description.length()) {
+            String medicamentsStr = description.substring(index + "Medicaments:".length()).trim();
+            if (!medicamentsStr.isEmpty()) {
+                String[] meds = medicamentsStr.split(",");
+                for (String med : meds) {
+                    String trimmed = med.trim();
+                    if (!trimmed.isEmpty()) {
+                        medicamentNames.add(trimmed);
+                    }
+                }
+            }
+        }
+    }
+    return medicamentNames;
+}
+
+// Vérifie toutes les interactions entre les médicaments 
+private List<String> verifierInteractionsMedicamenteuses(List<String> medicamentNames, Connection connection) 
+        throws SQLException {
+    List<String> interactions = new ArrayList<>();
+    
+    if (medicamentNames.size() < 2) {
+        return interactions;
+    }
+    
+    for (int i = 0; i < medicamentNames.size(); i++) {
+        for (int j = i + 1; j < medicamentNames.size(); j++) {
+            String med1 = medicamentNames.get(i);
+            String med2 = medicamentNames.get(j);
+            
+            Integer idMed1 = getMedicamentIdByName(med1, connection);
+            Integer idMed2 = getMedicamentIdByName(med2, connection);
+            
+            System.out.println("Medicament: " + med1 + " -> ID: " + idMed1);
+            System.out.println("Medicament: " + med2 + " -> ID: " + idMed2);
+            
+            if (idMed1 != null && idMed2 != null) {
+                System.out.println("Verification interaction entre " + med1 + " (ID: " + idMed1 + ") et " 
+                                  + med2 + " (ID: " + idMed2 + ")");
+                
+                String interaction = checkInteractionInDatabase(idMed1, idMed2, connection);
+                if (interaction != null) {
+                    interactions.add(med1 + " et " + med2 + ": " + interaction);
+                }
+            }
+        }
+    }
+    
+    return interactions;
+}
+
+private Integer getMedicamentIdByName(String nomMedicament, Connection connection) throws SQLException {
+    try (PreparedStatement pstmt = connection.prepareStatement(
+            "SELECT id_medicament FROM medicament WHERE LOWER(nom_medicament) = LOWER(?)")) {
+        pstmt.setString(1, nomMedicament);
+        try (ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("id_medicament");
+            }
+        }
+    }
+    return null;
+}
+
+private String checkInteractionInDatabase(int idMed1, int idMed2, Connection connection) throws SQLException {
+    String query = "SELECT description FROM interaction_medicamenteuse WHERE " +
+                  "(id_medicament1 = ? AND id_medicament2 = ?) OR " +
+                  "(id_medicament1 = ? AND id_medicament2 = ?)";
+    System.out.println("Exécution de la requête: " + query);
+    
+    try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+        pstmt.setInt(1, idMed1);
+        pstmt.setInt(2, idMed2);
+        pstmt.setInt(3, idMed2);
+        pstmt.setInt(4, idMed1);
+        
+        try (ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                String description = rs.getString("description");
+                System.out.println("Interaction trouvée: " + description);
+                return description;
+            } else {
+                System.out.println("Aucune interaction trouvée entre les médicaments " + idMed1 + " et " + idMed2);
+            }
+        }
+    }
+    return null;
+}
 
     private Response UpdateOrdonnance(final Request request, final Connection connection)
             throws SQLException, IOException {
@@ -402,9 +603,9 @@ public class XMartCityService {
             int rowsAffected = pstmt.executeUpdate();
 
             if (rowsAffected > 0) {
-                return new Response(request.getRequestId(), "Ordonnance mise à jour avec succès");
+                return new Response(request.getRequestId(), "Ordonnance mise a jour avec succes");
             } else {
-                return new Response(request.getRequestId(), "Aucune ordonnance trouvée pour mise à jour");
+                return new Response(request.getRequestId(), "Aucune ordonnance trouvee pour mise a jour");
             }
         }
     }
@@ -425,13 +626,14 @@ public class XMartCityService {
             }
 
             if (medicaments.getMedicaments().isEmpty()) {
-                return new Response(request.getRequestId(), "Aucun médicament trouvé");
+                return new Response(request.getRequestId(), "Aucun medicament trouve");
             }
 
             return new Response(request.getRequestId(), objectMapper.writeValueAsString(medicaments));
         }
     }
 
+    
     private Response SelectAllSymptomes(final Request request, final Connection connection)
             throws SQLException, JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
@@ -446,10 +648,10 @@ public class XMartCityService {
                 symptomes.add(symptome);
             }
 
-            System.out.println("Symptômes récupérés depuis la BD : " + symptomes);
+            System.out.println("Symptomes récupérés depuis la BD : " + symptomes);
 
             return new Response(request.getRequestId(),
-                    symptomes.isEmpty() ? "Aucun symptôme trouvé"
+                    symptomes.isEmpty() ? "Aucun symptome trouve"
                             : objectMapper.writeValueAsString(symptomes));
         }
     }
@@ -500,8 +702,8 @@ public class XMartCityService {
 
             return new Response(request.getRequestId(), 
                     rowsAffected > 0 
-                    ? "{\"message\": \"Symptôme mis à jour avec succès\"}"
-                    : "{\"message\": \"Aucun symptôme trouvé pour mise à jour\"}");
+                    ? "{\"message\": \"Symptome mis à jour avec succes\"}"
+                    : "{\"message\": \"Aucun symptome trouvé pour mise a jour\"}");
         }
     }
 

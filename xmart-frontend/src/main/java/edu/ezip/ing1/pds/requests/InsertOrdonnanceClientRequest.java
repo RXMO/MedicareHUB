@@ -20,9 +20,22 @@ public class InsertOrdonnanceClientRequest extends ClientRequest<Ordonnance, Str
 
     @Override
     public String readResult(String body) throws IOException {
-        final ObjectMapper mapper = new ObjectMapper();
-        final Map<String, Integer> ordonnanceIdMap = mapper.readValue(body, Map.class);
-        final String result = ordonnanceIdMap.get("ordonnance_id").toString();
-        return result;
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, Object> responseMap = mapper.readValue(body, Map.class);
+
+    if ("error".equals(responseMap.get("status"))) {
+        // En cas d'erreur, on peut retourner le message d'erreur (ou un autre champ)
+        return (String) responseMap.get("message");
     }
+
+    // Sinon, supposons que tu récupères l'ID ordonnance dans la clé "ordonnance_id"
+    if (responseMap.containsKey("ordonnance_id")) {
+        return responseMap.get("ordonnance_id").toString();
+    }
+
+    // Par défaut, retourne le body brut si aucun cas ne correspond
+    return body;
+}
+
+
 }

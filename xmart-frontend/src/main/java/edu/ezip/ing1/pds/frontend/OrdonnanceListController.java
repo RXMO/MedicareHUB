@@ -47,7 +47,7 @@ public class OrdonnanceListController implements Initializable {
     @FXML
     private Button closeButton;
     
-    private OrdonnanceFront mainController;
+    private OrdonnanceController mainController;
     private List<Ordonnance> ordonnancesList;
     
     @Override
@@ -64,7 +64,7 @@ public class OrdonnanceListController implements Initializable {
         closeButton.setOnAction(event -> handleCloseButton());
     }
     
-    public void setMainController(OrdonnanceFront controller) {
+    public void setMainController(OrdonnanceController controller) {
         this.mainController = controller;
     }
     
